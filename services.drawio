@@ -1,0 +1,62 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="CampusEats Services" id="services-diagram">
+    <mxGraphModel dx="1047" dy="691" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="svc_user" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="User Service&#xa;Owns: Students, Vendors, Administrators (accounts)&#xa;Team: [Your Name]" vertex="1">
+          <mxGeometry height="110" width="220" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_catalogue" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="Catalogue Service&#xa;Owns: Vendor Profiles, Menu, Food Items&#xa;Team: [Your Name]" vertex="1">
+          <mxGeometry height="110" width="220" x="400" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_payment" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="Payment Service&#xa;Owns: Payments&#xa;Team: [Your Name]" vertex="1">
+          <mxGeometry height="110" width="220" x="800" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_order" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="Order Service&#xa;Owns: Cart, CartItems, Orders,&#xa;OrderItems, Pickup Slots&#xa;Team: [Your Name]" vertex="1">
+          <mxGeometry height="120" width="220" x="240" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_notify" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="Notification Service&#xa;Owns: Notifications&#xa;Team: [Your Name]" vertex="1">
+          <mxGeometry height="110" width="220" x="680" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="svc_order" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;labelBackgroundColor=none;fontColor=default;" target="svc_catalogue" value="checkItem">
+          <mxGeometry relative="1" x="-0.001" y="-20" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="svc_order" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;labelBackgroundColor=none;fontColor=default;" target="svc_user" value="getUserProfile">
+          <mxGeometry relative="1" x="0.1282" y="20" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="350.07" y="220.07" />
+              <mxPoint x="150.07" y="220.07" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="svc_order" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;labelBackgroundColor=none;fontColor=default;" target="svc_payment" value="chargePayment">
+          <mxGeometry relative="1" x="0.5144" y="-50" as="geometry">
+            <mxPoint y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="svc_order" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;dashed=1;labelBackgroundColor=none;fontColor=default;" target="svc_notify" value="sendNotification (order confirmation)">
+          <mxGeometry relative="1" x="-0.2685" y="30" as="geometry">
+            <mxPoint x="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="svc_order" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;dashed=1;labelBackgroundColor=none;fontColor=default;" target="svc_notify" value="sendNotification (order status)">
+          <mxGeometry relative="1" x="-0.1895" y="10" as="geometry">
+            <mxPoint x="1" as="offset" />
+            <Array as="points">
+              <mxPoint x="700" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="svc_payment" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=11;dashed=1;labelBackgroundColor=none;fontColor=default;" target="svc_order" value="notifyPaymentResult">
+          <mxGeometry relative="1" x="-0.5971" y="-15" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
