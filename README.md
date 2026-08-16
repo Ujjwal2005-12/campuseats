@@ -1,7 +1,10 @@
 \# CampusEats
 
 
-
+krity kumari - 2025265101930
+ujjwal sharma- 20252651060
+vinit gaikwad - 20252651019
+shubhag baluni - 2025265101953
 CampusEats is a campus food ordering system designed to make ordering food from campus canteens and food vendors easier for students. The system allows students to browse menus, select food items, place orders, make payments, and track order status.
 
 
