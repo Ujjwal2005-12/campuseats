@@ -1,10 +1,10 @@
-\# CampusEats
+# CampusEats
 
-
-krity kumari - 2025265101930
-ujjwal sharma- 20252651060
-vinit gaikwad - 20252651019
-shubhag baluni - 2025265101953
+Submitted by:<br>
+Krity Kumari - 2025265101930<br> 
+Ujjwal Sharma- 20252651060<br>
+Vinit Gaikwad - 20252651019<br>
+Shubhag Baluni - 2025265101953<br>
 CampusEats is a campus food ordering system designed to make ordering food from campus canteens and food vendors easier for students. The system allows students to browse menus, select food items, place orders, make payments, and track order status.
 
 
@@ -13,7 +13,7 @@ This repository contains the work completed for the HTTP and project setup assig
 
 
 
-\## Assignment Objectives
+## Assignment Objectives
 
 
 
@@ -61,7 +61,7 @@ campuseats/
 
 
 
-\### Files
+### Files
 
 
 
@@ -77,7 +77,7 @@ campuseats/
 
 
 
-\## HTTP API Testing
+## HTTP API Testing
 
 
 
@@ -109,7 +109,7 @@ The last request intentionally requested a resource that does not exist and retu
 
 
 
-\## Browser Network Analysis
+## Browser Network Analysis
 
 
 
@@ -121,7 +121,7 @@ The browser cache was disabled before reloading the page. The analysis recorded 
 
 
 
-\## Git Workflow
+## Git Workflow
 
 
 
@@ -145,7 +145,7 @@ Add CampusEats system brief
 
 
 
-\## CampusEats Users
+## CampusEats Users
 
 
 
@@ -165,7 +165,7 @@ The system's main resources and operations are documented in `brief.md`.
 
 
 
-\## Status
+## Status
 
 
 
