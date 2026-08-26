@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<soap:Envelope
+    xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:cp="http://example.com/campuspay">
+
+    <soap:Header>
+
+        <cp:Credentials>
+            <cp:apiKey>campuseats-demo-key</cp:apiKey>
+            <cp:merchantId>CampusEats</cp:merchantId>
+        </cp:Credentials>
+
+    </soap:Header>
+
+    <soap:Body>
+
+        <cp:charge>
+
+            <cp:orderId>CE-1001</cp:orderId>
+            <cp:amount>499.00</cp:amount>
+            <cp:paymentMethodId>pm_12345</cp:paymentMethodId>
+            <cp:currency>INR</cp:currency>
+
+        </cp:charge>
+
+    </soap:Body>
+
+</soap:Envelope>
