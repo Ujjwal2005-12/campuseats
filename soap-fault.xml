@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<soap:Envelope
+    xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+
+    <soap:Header>
+    </soap:Header>
+
+    <soap:Body>
+
+        <soap:Fault>
+
+            <faultcode>soap:Client</faultcode>
+            <faultstring>Payment declined</faultstring>
+
+            <detail>
+                <errorCode>card_declined</errorCode>
+                <message>The payment method was declined by the payment gateway.</message>
+            </detail>
+
+        </soap:Fault>
+
+    </soap:Body>
+
+</soap:Envelope>
