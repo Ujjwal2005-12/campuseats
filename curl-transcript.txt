@@ -1,0 +1,57 @@
+# Start fresh
+rm -f curl-transcript.txt
+
+echo "=== 1. Successful create -> expect 201 + Location header ===" | tee -a curl-transcript.txt
+curl -i -X POST http://127.0.0.1:5000/orders \
+  -H "Content-Type: application/json" \
+  -d '{"customerId":"cust_001","items":[{"itemId":"item_pizza","quantity":2,"unitPrice":9.5}]}' \
+  | tee -a curl-transcript.txt
+echo -e "\n" | tee -a curl-transcript.txt
+
+echo "=== 2a. Idempotent create, first call with Idempotency-Key -> expect 201 ===" | tee -a curl-transcript.txt
+curl -i -X POST http://127.0.0.1:5000/orders \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: key-abc-001" \
+  -d '{"customerId":"cust_002","items":[{"itemId":"item_burger","quantity":1,"unitPrice":6.0}]}' \
+  | tee -a curl-transcript.txt
+echo -e "\n" | tee -a curl-transcript.txt
+
+echo "=== 2b. Idempotent create, SAME key + body repeated -> expect 201 with SAME orderId as above ===" | tee -a curl-transcript.txt
+curl -i -X POST http://127.0.0.1:5000/orders \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: key-abc-001" \
+  -d '{"customerId":"cust_002","items":[{"itemId":"item_burger","quantity":1,"unitPrice":6.0}]}' \
+  | tee -a curl-transcript.txt
+echo -e "\n" | tee -a curl-transcript.txt
+
+echo "=== 3. Malformed / invalid body (missing items) -> expect 400/422 ===" | tee -a curl-transcript.txt
+curl -i -X POST http://127.0.0.1:5000/orders \
+  -H "Content-Type: application/json" \
+  -d '{"customerId":"cust_001"}' \
+  | tee -a curl-transcript.txt
+echo -e "\n" | tee -a curl-transcript.txt
+
+echo "=== 4. Missing resource -> expect 404 ===" | tee -a curl-transcript.txt
+curl -i http://127.0.0.1:5000/orders/does-not-exist \
+  | tee -a curl-transcript.txt
+echo -e "\n" | tee -a curl-transcript.txt
+
+echo "=== 5a. Cancel an order for the first time -> expect 201 ===" | tee -a curl-transcript.txt
+curl -i -X POST http://127.0.0.1:5000/orders/ord_4868cdc29030/cancellation \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"changed my mind"}' \
+  | tee -a curl-transcript.txt
+echo -e "\n" | tee -a curl-transcript.txt
+
+echo "=== 5b. State conflict: cancel the SAME order again -> expect 409 ===" | tee -a curl-transcript.txt
+curl -i -X POST http://127.0.0.1:5000/orders/ord_4868cdc29030/cancellation \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"changed my mind again"}' \
+  | tee -a curl-transcript.txt
+echo -e "\n" | tee -a curl-transcript.txt
+
+echo "Done. See curl-transcript.txt"
+
+
+(base) vinitgaikwad@Vinits-MacBook-Air assignment4-orders % openapi-spec-validator openapi.yaml
+openapi.yaml: OK
