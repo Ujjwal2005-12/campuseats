@@ -3,10 +3,10 @@
 **Team:**
 | Name | Roll No |
 |---|---|
-| Krity Kumari | 2025265101930 |
+| Krity Kumari | 202526510130 |
 | Ujjwal Sharma | 20252651060 |
 | Vinit Gaikwad | 20252651019 |
-| Shubhag Baluni | 2025265101953 |
+| Shubhag Baluni | 202526510153 |
 
 ---
 
