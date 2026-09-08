@@ -1,0 +1,303 @@
+openapi: 3.0.3
+info:
+  title: CampusEats Orders Service
+  description: >
+    Manages customer orders for CampusEats. Rebuilt as a REST API from the
+    Assignment 3 SOAP design (operations: createOrder, getOrder,
+    listOrdersByCustomer, cancelOrder, updateOrderStatus).
+  version: 1.0.0
+  contact:
+    name: "[Your Name]"
+
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+
+tags:
+  - name: Orders
+    description: Order lifecycle operations
+
+paths:
+  /orders:
+    post:
+      tags: [Orders]
+      operationId: createOrder
+      summary: Create a new order
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: >
+            Optional client-supplied key. Repeating a create with the same
+            key returns the original order instead of creating a duplicate.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderCreateRequest"
+      responses:
+        "201":
+          description: Order created
+          headers:
+            Location:
+              description: URL of the newly created order
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: Malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Well-formed request the domain refuses (e.g. empty item list)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+    get:
+      tags: [Orders]
+      operationId: listOrdersByCustomer
+      summary: List orders for a customer
+      parameters:
+        - name: customerId
+          in: query
+          required: true
+          description: Filter orders by customer id
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of matching orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+        "400":
+          description: Missing or malformed customerId query parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /orders/{orderId}:
+    get:
+      tags: [Orders]
+      operationId: getOrder
+      summary: Retrieve a single order by id
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: The requested order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: No order with that id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+    patch:
+      tags: [Orders]
+      operationId: updateOrderStatus
+      summary: Update an order's status
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderStatusUpdateRequest"
+      responses:
+        "200":
+          description: Order status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: No order with that id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Requested status is not reachable from the order's current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Well-formed request the domain refuses (e.g. unknown status value)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /orders/{orderId}/cancellation:
+    post:
+      tags: [Orders]
+      operationId: cancelOrder
+      summary: Cancel an order (creates a cancellation record)
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: >
+            Optional client-supplied key. Repeating a cancellation with the
+            same key returns the original cancellation result.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancellationRequest"
+      responses:
+        "201":
+          description: Cancellation record created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancellationResponse"
+        "404":
+          description: No order with that id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: Order is already shipped/delivered and cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: Well-formed request the domain refuses (e.g. missing reason)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+components:
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      description: Unique identifier of the order
+      schema:
+        type: string
+
+  schemas:
+    OrderItem:
+      type: object
+      required: [itemId, quantity]
+      properties:
+        itemId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: float
+
+    OrderCreateRequest:
+      type: object
+      required: [customerId, items]
+      properties:
+        customerId:
+          type: string
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        notes:
+          type: string
+
+    OrderStatusUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [confirmed, preparing, dispatched, delivered]
+
+    CancellationRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+
+    CancellationResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+        status:
+          type: string
+          enum: [cancelled]
+        reason:
+          type: string
+        cancelledAt:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        orderId:
+          type: string
+        customerId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        status:
+          type: string
+          enum:
+            [created, confirmed, preparing, dispatched, delivered, cancelled]
+        totalAmount:
+          type: number
+          format: float
+        createdAt:
+          type: string
+          format: date-time
+
+    Problem:
+      type: object
+      description: RFC 7807-style problem details, used for every error response.
+      properties:
+        type:
+          type: string
+          example: "https://campuseats.example.com/errors/not-found"
+        title:
+          type: string
+          example: "Order not found"
+        status:
+          type: integer
+          example: 404
+        detail:
+          type: string
+          example: "No order exists with id 'ord_123'."
