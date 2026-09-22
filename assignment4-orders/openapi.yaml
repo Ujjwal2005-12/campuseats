@@ -2,20 +2,24 @@ openapi: 3.0.3
 info:
   title: CampusEats Orders Service
   description: >
-    Manages customer orders for CampusEats. Rebuilt as a REST API from the
-    Assignment 3 SOAP design (operations: createOrder, getOrder,
-    listOrdersByCustomer, cancelOrder, updateOrderStatus).
-  version: 1.0.0
+    Manages customer orders for CampusEats. Rebuilt as a REST API and updated for
+    Assignment 5: HTTP Methods & Headers, covering strict verb usage, query parameters
+    for reads, OPTIONS and Allow headers, X-HTTP-Method-Override, content negotiation,
+    Authorization, deterministic ETags, conditional requests (304 / 412), idempotency
+    conflict resolution (409), per-client rate limiting (429), CORS, and security headers.
+  version: 2.0.0
   contact:
-    name: "[Your Name]"
+    name: "CampusEats Engineering Team"
 
 servers:
-  - url: http://localhost:5000
+  - url: http://localhost:5050
     description: Local development server
 
 tags:
   - name: Orders
-    description: Order lifecycle operations
+    description: Order lifecycle and query operations
+  - name: Cancellations
+    description: Non-CRUD order cancellation operations
 
 paths:
   /orders:
@@ -24,14 +28,8 @@ paths:
       operationId: createOrder
       summary: Create a new order
       parameters:
-        - name: Idempotency-Key
-          in: header
-          required: false
-          description: >
-            Optional client-supplied key. Repeating a create with the same
-            key returns the original order instead of creating a duplicate.
-          schema:
-            type: string
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
       requestBody:
         required: true
         content:
@@ -40,43 +38,72 @@ paths:
               $ref: "#/components/schemas/OrderCreateRequest"
       responses:
         "201":
-          description: Order created
+          description: Order created successfully
           headers:
             Location:
-              description: URL of the newly created order
-              schema:
-                type: string
+              $ref: "#/components/headers/Location"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            X-Content-Type-Options:
+              $ref: "#/components/headers/X-Content-Type-Options"
+            Strict-Transport-Security:
+              $ref: "#/components/headers/Strict-Transport-Security"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Order"
         "400":
-          description: Malformed request body
+          $ref: "#/components/responses/Problem400"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "406":
+          $ref: "#/components/responses/Problem406"
+        "409":
+          description: Idempotency conflict (key reused with different payload)
+          headers:
+            X-Content-Type-Options:
+              $ref: "#/components/headers/X-Content-Type-Options"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Problem"
         "422":
-          description: Well-formed request the domain refuses (e.g. empty item list)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/Problem422"
+        "429":
+          $ref: "#/components/responses/Problem429"
 
     get:
       tags: [Orders]
-      operationId: listOrdersByCustomer
-      summary: List orders for a customer
+      operationId: listOrders
+      summary: List, filter, sort, and paginate orders
       parameters:
-        - name: customerId
-          in: query
-          required: true
-          description: Filter orders by customer id
-          schema:
-            type: string
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/CustomerIdQuery"
+        - $ref: "#/components/parameters/StatusQuery"
+        - $ref: "#/components/parameters/SortQuery"
+        - $ref: "#/components/parameters/OrderQuery"
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/PageSizeQuery"
       responses:
         "200":
           description: List of matching orders
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: Total count of matching orders across all pages
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            X-Content-Type-Options:
+              $ref: "#/components/headers/X-Content-Type-Options"
+            Strict-Transport-Security:
+              $ref: "#/components/headers/Strict-Transport-Security"
           content:
             application/json:
               schema:
@@ -84,39 +111,89 @@ paths:
                 items:
                   $ref: "#/components/schemas/Order"
         "400":
-          description: Missing or malformed customerId query parameter
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/Problem400"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "406":
+          $ref: "#/components/responses/Problem406"
+        "429":
+          $ref: "#/components/responses/Problem429"
+
+    options:
+      tags: [Orders]
+      operationId: optionsOrders
+      summary: Inspect allowed methods and CORS preflight for /orders
+      responses:
+        "204":
+          description: Allowed methods and CORS preflight response
+          headers:
+            Allow:
+              $ref: "#/components/headers/Allow"
+            Access-Control-Allow-Origin:
+              $ref: "#/components/headers/Access-Control-Allow-Origin"
+            Access-Control-Allow-Methods:
+              $ref: "#/components/headers/Access-Control-Allow-Methods"
+            Access-Control-Allow-Headers:
+              $ref: "#/components/headers/Access-Control-Allow-Headers"
 
   /orders/{orderId}:
     get:
       tags: [Orders]
       operationId: getOrder
-      summary: Retrieve a single order by id
+      summary: Retrieve a single order by id with caching and conditional GET
       parameters:
         - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/IfNoneMatchHeader"
       responses:
         "200":
-          description: The requested order
+          description: The requested order representation
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/Cache-Control"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            X-Content-Type-Options:
+              $ref: "#/components/headers/X-Content-Type-Options"
+            Strict-Transport-Security:
+              $ref: "#/components/headers/Strict-Transport-Security"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Order"
+        "304":
+          description: Not Modified — representation matches client If-None-Match header
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/Cache-Control"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+        "401":
+          $ref: "#/components/responses/Problem401"
         "404":
-          description: No order with that id
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/Problem404"
+        "406":
+          $ref: "#/components/responses/Problem406"
+        "429":
+          $ref: "#/components/responses/Problem429"
 
     patch:
       tags: [Orders]
       operationId: updateOrderStatus
-      summary: Update an order's status
+      summary: Update order status with conditional write (If-Match)
       parameters:
         - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/IfMatchHeader"
+        - $ref: "#/components/parameters/XHTTPMethodOverrideHeader"
       requestBody:
         required: true
         content:
@@ -126,44 +203,80 @@ paths:
       responses:
         "200":
           description: Order status updated
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            X-Content-Type-Options:
+              $ref: "#/components/headers/X-Content-Type-Options"
+            Strict-Transport-Security:
+              $ref: "#/components/headers/Strict-Transport-Security"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/Problem400"
+        "401":
+          $ref: "#/components/responses/Problem401"
         "404":
-          description: No order with that id
+          $ref: "#/components/responses/Problem404"
+        "406":
+          $ref: "#/components/responses/Problem406"
+        "409":
+          description: Invalid status transition
+          headers:
+            X-Content-Type-Options:
+              $ref: "#/components/headers/X-Content-Type-Options"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        "409":
-          description: Requested status is not reachable from the order's current state
+        "412":
+          description: Precondition Failed — If-Match does not match current ETag
+          headers:
+            X-Content-Type-Options:
+              $ref: "#/components/headers/X-Content-Type-Options"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Problem"
         "422":
-          description: Well-formed request the domain refuses (e.g. unknown status value)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/Problem422"
+        "429":
+          $ref: "#/components/responses/Problem429"
 
-  /orders/{orderId}/cancellation:
-    post:
+    options:
       tags: [Orders]
-      operationId: cancelOrder
-      summary: Cancel an order (creates a cancellation record)
+      operationId: optionsOrderItem
+      summary: Inspect allowed methods and CORS preflight for /orders/{orderId}
       parameters:
         - $ref: "#/components/parameters/OrderId"
-        - name: Idempotency-Key
-          in: header
-          required: false
-          description: >
-            Optional client-supplied key. Repeating a cancellation with the
-            same key returns the original cancellation result.
-          schema:
-            type: string
+      responses:
+        "204":
+          description: Allowed methods and CORS preflight response
+          headers:
+            Allow:
+              $ref: "#/components/headers/Allow"
+            Access-Control-Allow-Origin:
+              $ref: "#/components/headers/Access-Control-Allow-Origin"
+            Access-Control-Allow-Methods:
+              $ref: "#/components/headers/Access-Control-Allow-Methods"
+            Access-Control-Allow-Headers:
+              $ref: "#/components/headers/Access-Control-Allow-Headers"
+
+  /orders/{orderId}/cancel:
+    post:
+      tags: [Cancellations]
+      operationId: cancelOrder
+      summary: Cancel an order via non-CRUD sub-resource
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
       requestBody:
         required: true
         content:
@@ -172,31 +285,174 @@ paths:
               $ref: "#/components/schemas/CancellationRequest"
       responses:
         "201":
-          description: Cancellation record created
+          description: Order cancellation record created
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/X-RateLimit-Limit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/X-RateLimit-Remaining"
+            X-Content-Type-Options:
+              $ref: "#/components/headers/X-Content-Type-Options"
+            Strict-Transport-Security:
+              $ref: "#/components/headers/Strict-Transport-Security"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CancellationResponse"
+        "400":
+          $ref: "#/components/responses/Problem400"
+        "401":
+          $ref: "#/components/responses/Problem401"
         "404":
-          description: No order with that id
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/Problem404"
+        "406":
+          $ref: "#/components/responses/Problem406"
         "409":
-          description: Order is already shipped/delivered and cannot be cancelled
+          description: Order cannot be cancelled (already cancelled or delivered)
+          headers:
+            X-Content-Type-Options:
+              $ref: "#/components/headers/X-Content-Type-Options"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Problem"
         "422":
-          description: Well-formed request the domain refuses (e.g. missing reason)
+          $ref: "#/components/responses/Problem422"
+        "429":
+          $ref: "#/components/responses/Problem429"
+
+    options:
+      tags: [Cancellations]
+      operationId: optionsCancelOrder
+      summary: Inspect allowed methods and CORS preflight for cancellation
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "204":
+          description: Allowed methods and CORS preflight response
+          headers:
+            Allow:
+              $ref: "#/components/headers/Allow"
+            Access-Control-Allow-Origin:
+              $ref: "#/components/headers/Access-Control-Allow-Origin"
+            Access-Control-Allow-Methods:
+              $ref: "#/components/headers/Access-Control-Allow-Methods"
+            Access-Control-Allow-Headers:
+              $ref: "#/components/headers/Access-Control-Allow-Headers"
+
+  /orders/{orderId}/cancellation:
+    post:
+      tags: [Cancellations]
+      operationId: cancelOrderAlias
+      summary: Cancel an order (Assignment 4 backwards-compatible alias)
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancellationRequest"
+      responses:
+        "201":
+          description: Order cancellation record created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Problem"
+                $ref: "#/components/schemas/CancellationResponse"
+        "400":
+          $ref: "#/components/responses/Problem400"
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "404":
+          $ref: "#/components/responses/Problem404"
+        "406":
+          $ref: "#/components/responses/Problem406"
+        "409":
+          $ref: "#/components/responses/Problem409"
+        "422":
+          $ref: "#/components/responses/Problem422"
+        "429":
+          $ref: "#/components/responses/Problem429"
+
+    options:
+      tags: [Cancellations]
+      operationId: optionsCancelOrderAlias
+      summary: Inspect allowed methods and CORS preflight for cancellation alias
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "204":
+          description: Allowed methods
+          headers:
+            Allow:
+              $ref: "#/components/headers/Allow"
 
 components:
+  headers:
+    Location:
+      description: URI of newly created resource
+      schema:
+        type: string
+        example: "/orders/ord_58dfd44cd4a7"
+    ETag:
+      description: Deterministic resource representation hash (strong ETag)
+      schema:
+        type: string
+        example: '"625c7f4b13b401ec"'
+    Cache-Control:
+      description: Directives for caching mechanisms
+      schema:
+        type: string
+        example: "private, no-cache"
+    Allow:
+      description: Supported HTTP methods for the targeted resource
+      schema:
+        type: string
+        example: "GET, PATCH, OPTIONS"
+    X-RateLimit-Limit:
+      description: Maximum request quota per window
+      schema:
+        type: integer
+        example: 60
+    X-RateLimit-Remaining:
+      description: Remaining quota in current window
+      schema:
+        type: integer
+        example: 59
+    Retry-After:
+      description: Seconds client must wait before retrying when 429 is returned
+      schema:
+        type: integer
+        example: 45
+    Access-Control-Allow-Origin:
+      description: Permitted cross-origin domain
+      schema:
+        type: string
+        example: "https://campuseats.example.com"
+    Access-Control-Allow-Methods:
+      description: Permitted cross-origin methods
+      schema:
+        type: string
+        example: "GET, POST, PATCH, OPTIONS"
+    Access-Control-Allow-Headers:
+      description: Permitted request headers in preflight
+      schema:
+        type: string
+        example: "Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override"
+    X-Content-Type-Options:
+      description: Security header preventing MIME sniffing
+      schema:
+        type: string
+        example: "nosniff"
+    Strict-Transport-Security:
+      description: Enforces HTTPS communication
+      schema:
+        type: string
+        example: "max-age=31536000; includeSubDomains"
+
   parameters:
     OrderId:
       name: orderId
@@ -205,6 +461,113 @@ components:
       description: Unique identifier of the order
       schema:
         type: string
+        example: "ord_58dfd44cd4a7"
+
+    AuthorizationHeader:
+      name: Authorization
+      in: header
+      required: true
+      description: Bearer token for client authentication and rate-limiting identity
+      schema:
+        type: string
+        example: "Bearer student-token-123"
+
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Client-supplied key to safely retry non-idempotent operations without duplicates
+      schema:
+        type: string
+        example: "idem-abc-12345"
+
+    IfMatchHeader:
+      name: If-Match
+      in: header
+      required: false
+      description: Resource ETag for optimistic concurrency control (conditional write)
+      schema:
+        type: string
+        example: '"625c7f4b13b401ec"'
+
+    IfNoneMatchHeader:
+      name: If-None-Match
+      in: header
+      required: false
+      description: Resource ETag for conditional GET validation
+      schema:
+        type: string
+        example: '"625c7f4b13b401ec"'
+
+    XHTTPMethodOverrideHeader:
+      name: X-HTTP-Method-Override
+      in: header
+      required: false
+      description: Fallback header for constrained clients to override POST to PUT/PATCH/DELETE
+      schema:
+        type: string
+        enum: [PUT, PATCH, DELETE]
+        example: "PATCH"
+
+    CustomerIdQuery:
+      name: customerId
+      in: query
+      required: false
+      description: Filter orders by customer ID
+      schema:
+        type: string
+        example: "cust_001"
+
+    StatusQuery:
+      name: status
+      in: query
+      required: false
+      description: Filter orders by lifecycle status
+      schema:
+        type: string
+        enum: [created, confirmed, preparing, dispatched, delivered, cancelled]
+        example: "confirmed"
+
+    SortQuery:
+      name: sort
+      in: query
+      required: false
+      description: Sort field for order list
+      schema:
+        type: string
+        enum: [createdAt, totalAmount, orderId, status, customerId]
+        default: createdAt
+
+    OrderQuery:
+      name: order
+      in: query
+      required: false
+      description: Sort order direction
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+
+    PageQuery:
+      name: page
+      in: query
+      required: false
+      description: Page number for pagination (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    PageSizeQuery:
+      name: pageSize
+      in: query
+      required: false
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
 
   schemas:
     OrderItem:
@@ -213,12 +576,15 @@ components:
       properties:
         itemId:
           type: string
+          example: "item_pizza"
         quantity:
           type: integer
           minimum: 1
+          example: 2
         unitPrice:
           type: number
           format: float
+          example: 9.50
 
     OrderCreateRequest:
       type: object
@@ -226,6 +592,7 @@ components:
       properties:
         customerId:
           type: string
+          example: "cust_001"
         items:
           type: array
           minItems: 1
@@ -233,6 +600,7 @@ components:
             $ref: "#/components/schemas/OrderItem"
         notes:
           type: string
+          example: "Extra spicy"
 
     OrderStatusUpdateRequest:
       type: object
@@ -240,7 +608,8 @@ components:
       properties:
         status:
           type: string
-          enum: [confirmed, preparing, dispatched, delivered]
+          enum: [confirmed, preparing, dispatched, delivered, cancelled]
+          example: "confirmed"
 
     CancellationRequest:
       type: object
@@ -248,17 +617,20 @@ components:
       properties:
         reason:
           type: string
+          example: "Ordered wrong canteen stall"
 
     CancellationResponse:
       type: object
       properties:
         orderId:
           type: string
+          example: "ord_58dfd44cd4a7"
         status:
           type: string
           enum: [cancelled]
         reason:
           type: string
+          example: "Ordered wrong canteen stall"
         cancelledAt:
           type: string
           format: date-time
@@ -268,36 +640,121 @@ components:
       properties:
         orderId:
           type: string
+          example: "ord_58dfd44cd4a7"
         customerId:
           type: string
+          example: "cust_001"
         items:
           type: array
           items:
             $ref: "#/components/schemas/OrderItem"
         status:
           type: string
-          enum:
-            [created, confirmed, preparing, dispatched, delivered, cancelled]
+          enum: [created, confirmed, preparing, dispatched, delivered, cancelled]
+          example: "created"
         totalAmount:
           type: number
           format: float
+          example: 19.00
         createdAt:
           type: string
           format: date-time
 
     Problem:
       type: object
-      description: RFC 7807-style problem details, used for every error response.
+      description: RFC 7807 problem details specification
+      required: [type, title, status, detail]
       properties:
         type:
           type: string
-          example: "https://campuseats.example.com/errors/not-found"
+          example: "https://campuseats.example.com/errors/400"
         title:
           type: string
-          example: "Order not found"
+          example: "Bad Request"
         status:
           type: integer
-          example: 404
+          example: 400
         detail:
           type: string
-          example: "No order exists with id 'ord_123'."
+          example: "Request body must be valid JSON."
+
+  responses:
+    Problem400:
+      description: Malformed syntax or invalid query parameters
+      headers:
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    Problem401:
+      description: Missing or invalid Authorization Bearer token
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            example: "Bearer"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    Problem404:
+      description: Requested resource was not found
+      headers:
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    Problem406:
+      description: Not Acceptable — client Accept header does not allow application/json
+      headers:
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    Problem409:
+      description: State conflict or idempotency conflict
+      headers:
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    Problem422:
+      description: Unprocessable Content — syntactically valid JSON failing domain rules
+      headers:
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+    Problem429:
+      description: Too Many Requests — per-client rate limit budget exceeded
+      headers:
+        Retry-After:
+          $ref: "#/components/headers/Retry-After"
+        X-RateLimit-Limit:
+          $ref: "#/components/headers/X-RateLimit-Limit"
+        X-RateLimit-Remaining:
+          $ref: "#/components/headers/X-RateLimit-Remaining"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"

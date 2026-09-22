@@ -1,57 +1,454 @@
-# Start fresh
-rm -f curl-transcript.txt
+============================================================
+1. SUCCESSFUL CREATE -> 201 Created + Location header
+============================================================
+$ curl.exe -v -s http://127.0.0.1:5050/orders -H Content-Type: application/json -H Authorization: Bearer student-token-curl -H Idempotency-Key: idem-curl-key-001 --data-binary @payload1.json
 
-echo "=== 1. Successful create -> expect 201 + Location header ===" | tee -a curl-transcript.txt
-curl -i -X POST http://127.0.0.1:5000/orders \
-  -H "Content-Type: application/json" \
-  -d '{"customerId":"cust_001","items":[{"itemId":"item_pizza","quantity":2,"unitPrice":9.5}]}' \
-  | tee -a curl-transcript.txt
-echo -e "\n" | tee -a curl-transcript.txt
+*   Trying 127.0.0.1:5050...
+* Established connection to 127.0.0.1 (127.0.0.1 port 5050) from 127.0.0.1 port 59099 
+* using HTTP/1.x
+> POST /orders HTTP/1.1
 
-echo "=== 2a. Idempotent create, first call with Idempotency-Key -> expect 201 ===" | tee -a curl-transcript.txt
-curl -i -X POST http://127.0.0.1:5000/orders \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: key-abc-001" \
-  -d '{"customerId":"cust_002","items":[{"itemId":"item_burger","quantity":1,"unitPrice":6.0}]}' \
-  | tee -a curl-transcript.txt
-echo -e "\n" | tee -a curl-transcript.txt
+> Host: 127.0.0.1:5050
 
-echo "=== 2b. Idempotent create, SAME key + body repeated -> expect 201 with SAME orderId as above ===" | tee -a curl-transcript.txt
-curl -i -X POST http://127.0.0.1:5000/orders \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: key-abc-001" \
-  -d '{"customerId":"cust_002","items":[{"itemId":"item_burger","quantity":1,"unitPrice":6.0}]}' \
-  | tee -a curl-transcript.txt
-echo -e "\n" | tee -a curl-transcript.txt
+> User-Agent: curl/8.21.0
 
-echo "=== 3. Malformed / invalid body (missing items) -> expect 400/422 ===" | tee -a curl-transcript.txt
-curl -i -X POST http://127.0.0.1:5000/orders \
-  -H "Content-Type: application/json" \
-  -d '{"customerId":"cust_001"}' \
-  | tee -a curl-transcript.txt
-echo -e "\n" | tee -a curl-transcript.txt
+> Accept: */*
 
-echo "=== 4. Missing resource -> expect 404 ===" | tee -a curl-transcript.txt
-curl -i http://127.0.0.1:5000/orders/does-not-exist \
-  | tee -a curl-transcript.txt
-echo -e "\n" | tee -a curl-transcript.txt
+> Content-Type: application/json
 
-echo "=== 5a. Cancel an order for the first time -> expect 201 ===" | tee -a curl-transcript.txt
-curl -i -X POST http://127.0.0.1:5000/orders/ord_4868cdc29030/cancellation \
-  -H "Content-Type: application/json" \
-  -d '{"reason":"changed my mind"}' \
-  | tee -a curl-transcript.txt
-echo -e "\n" | tee -a curl-transcript.txt
+> Authorization: Bearer student-token-curl
 
-echo "=== 5b. State conflict: cancel the SAME order again -> expect 409 ===" | tee -a curl-transcript.txt
-curl -i -X POST http://127.0.0.1:5000/orders/ord_4868cdc29030/cancellation \
-  -H "Content-Type: application/json" \
-  -d '{"reason":"changed my mind again"}' \
-  | tee -a curl-transcript.txt
-echo -e "\n" | tee -a curl-transcript.txt
+> Idempotency-Key: idem-curl-key-001
 
-echo "Done. See curl-transcript.txt"
+> Content-Length: 96
+
+> 
+
+} [96 bytes data]
+* upload completely sent off: 96 bytes
+< HTTP/1.1 201 CREATED
+
+< Server: Werkzeug/3.1.8 Python/3.14.0
+
+< Date: Tue, 22 Sep 2026 08:39:47 GMT
+
+< Content-Type: application/json
+
+< Content-Length: 265
+
+< Location: /orders/ord_d39115b00120
+
+< ETag: "f93f1c25bbb5734a"
+
+< X-Content-Type-Options: nosniff
+
+< Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+< Access-Control-Allow-Origin: https://campuseats.example.com
+
+< Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+
+< X-RateLimit-Limit: 60
+
+< X-RateLimit-Remaining: 59
+
+< Connection: close
+
+< 
+
+{ [265 bytes data]
+* shutting down connection #0
+{
+  "createdAt": "2026-09-22T08:39:47.474897+00:00",
+  "customerId": "cust_001",
+  "items": [
+    {
+      "itemId": "item_pizza",
+      "quantity": 2,
+      "unitPrice": 9.5
+    }
+  ],
+  "orderId": "ord_d39115b00120",
+  "status": "created",
+  "totalAmount": 19.0
+}
 
 
-(base) vinitgaikwad@Vinits-MacBook-Air assignment4-orders % openapi-spec-validator openapi.yaml
-openapi.yaml: OK
+============================================================
+2. REPEAT SAME CREATE -> Same Idempotency-Key, original 201 result returned
+============================================================
+$ curl.exe -v -s http://127.0.0.1:5050/orders -H Content-Type: application/json -H Authorization: Bearer student-token-curl -H Idempotency-Key: idem-curl-key-001 --data-binary @payload1.json
+
+*   Trying 127.0.0.1:5050...
+* Established connection to 127.0.0.1 (127.0.0.1 port 5050) from 127.0.0.1 port 59100 
+* using HTTP/1.x
+> POST /orders HTTP/1.1
+
+> Host: 127.0.0.1:5050
+
+> User-Agent: curl/8.21.0
+
+> Accept: */*
+
+> Content-Type: application/json
+
+> Authorization: Bearer student-token-curl
+
+> Idempotency-Key: idem-curl-key-001
+
+> Content-Length: 96
+
+> 
+
+} [96 bytes data]
+* upload completely sent off: 96 bytes
+< HTTP/1.1 201 CREATED
+
+< Server: Werkzeug/3.1.8 Python/3.14.0
+
+< Date: Tue, 22 Sep 2026 08:39:47 GMT
+
+< Content-Type: application/json
+
+< Content-Length: 265
+
+< Location: /orders/ord_d39115b00120
+
+< ETag: "f93f1c25bbb5734a"
+
+< X-Content-Type-Options: nosniff
+
+< Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+< Access-Control-Allow-Origin: https://campuseats.example.com
+
+< Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+
+< X-RateLimit-Limit: 60
+
+< X-RateLimit-Remaining: 58
+
+< Connection: close
+
+< 
+
+{ [265 bytes data]
+* shutting down connection #0
+{
+  "createdAt": "2026-09-22T08:39:47.474897+00:00",
+  "customerId": "cust_001",
+  "items": [
+    {
+      "itemId": "item_pizza",
+      "quantity": 2,
+      "unitPrice": 9.5
+    }
+  ],
+  "orderId": "ord_d39115b00120",
+  "status": "created",
+  "totalAmount": 19.0
+}
+
+
+============================================================
+3. CONDITIONAL GET -> If-None-Match matching ETag -> 304 Not Modified
+============================================================
+$ curl.exe -v -s http://127.0.0.1:5050/orders/ord_d39115b00120 -H Authorization: Bearer student-token-curl -H If-None-Match: "f93f1c25bbb5734a"
+
+*   Trying 127.0.0.1:5050...
+* Established connection to 127.0.0.1 (127.0.0.1 port 5050) from 127.0.0.1 port 59101 
+* using HTTP/1.x
+> GET /orders/ord_d39115b00120 HTTP/1.1
+
+> Host: 127.0.0.1:5050
+
+> User-Agent: curl/8.21.0
+
+> Accept: */*
+
+> Authorization: Bearer student-token-curl
+
+> If-None-Match: "f93f1c25bbb5734a"
+
+> 
+
+* Request completely sent off
+< HTTP/1.1 304 NOT MODIFIED
+
+< Server: Werkzeug/3.1.8 Python/3.14.0
+
+< Date: Tue, 22 Sep 2026 08:39:47 GMT
+
+< ETag: "f93f1c25bbb5734a"
+
+< Cache-Control: private, no-cache
+
+< X-Content-Type-Options: nosniff
+
+< Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+< Access-Control-Allow-Origin: https://campuseats.example.com
+
+< Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+
+< X-RateLimit-Limit: 60
+
+< X-RateLimit-Remaining: 57
+
+< Connection: close
+
+< 
+
+* shutting down connection #0
+
+
+============================================================
+4. CONDITIONAL WRITE -> Stale If-Match -> 412 Precondition Failed
+============================================================
+$ curl.exe -v -s -X PATCH http://127.0.0.1:5050/orders/ord_d39115b00120 -H Content-Type: application/json -H Authorization: Bearer student-token-curl -H If-Match: "stale-etag-9999" --data-binary @payload4.json
+
+*   Trying 127.0.0.1:5050...
+* Established connection to 127.0.0.1 (127.0.0.1 port 5050) from 127.0.0.1 port 59102 
+* using HTTP/1.x
+> PATCH /orders/ord_d39115b00120 HTTP/1.1
+
+> Host: 127.0.0.1:5050
+
+> User-Agent: curl/8.21.0
+
+> Accept: */*
+
+> Content-Type: application/json
+
+> Authorization: Bearer student-token-curl
+
+> If-Match: "stale-etag-9999"
+
+> Content-Length: 23
+
+> 
+
+} [23 bytes data]
+* upload completely sent off: 23 bytes
+< HTTP/1.1 412 PRECONDITION FAILED
+
+< Server: Werkzeug/3.1.8 Python/3.14.0
+
+< Date: Tue, 22 Sep 2026 08:39:47 GMT
+
+< Content-Type: application/json
+
+< Content-Length: 223
+
+< X-Content-Type-Options: nosniff
+
+< Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+< Access-Control-Allow-Origin: https://campuseats.example.com
+
+< Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+
+< X-RateLimit-Limit: 60
+
+< X-RateLimit-Remaining: 56
+
+< Connection: close
+
+< 
+
+{ [223 bytes data]
+* shutting down connection #0
+{
+  "detail": "Supplied If-Match '\"stale-etag-9999\"' does not match current resource ETag \"f93f1c25bbb5734a\".",
+  "status": 412,
+  "title": "Precondition Failed",
+  "type": "https://campuseats.example.com/errors/412"
+}
+
+
+============================================================
+5. MALFORMED BODY (MISSING CUSTOMER ID) -> 400 Bad Request
+============================================================
+$ curl.exe -v -s http://127.0.0.1:5050/orders -H Content-Type: application/json -H Authorization: Bearer student-token-curl --data-binary @payload5.json
+
+*   Trying 127.0.0.1:5050...
+* Established connection to 127.0.0.1 (127.0.0.1 port 5050) from 127.0.0.1 port 59103 
+* using HTTP/1.x
+> POST /orders HTTP/1.1
+
+> Host: 127.0.0.1:5050
+
+> User-Agent: curl/8.21.0
+
+> Accept: */*
+
+> Content-Type: application/json
+
+> Authorization: Bearer student-token-curl
+
+> Content-Length: 52
+
+> 
+
+} [52 bytes data]
+* upload completely sent off: 52 bytes
+< HTTP/1.1 400 BAD REQUEST
+
+< Server: Werkzeug/3.1.8 Python/3.14.0
+
+< Date: Tue, 22 Sep 2026 08:39:47 GMT
+
+< Content-Type: application/json
+
+< Content-Length: 166
+
+< X-Content-Type-Options: nosniff
+
+< Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+< Access-Control-Allow-Origin: https://campuseats.example.com
+
+< Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+
+< X-RateLimit-Limit: 60
+
+< X-RateLimit-Remaining: 55
+
+< Connection: close
+
+< 
+
+{ [166 bytes data]
+* shutting down connection #0
+{
+  "detail": "'customerId' is required and must be a string.",
+  "status": 400,
+  "title": "Malformed body",
+  "type": "https://campuseats.example.com/errors/400"
+}
+
+
+============================================================
+6. UNKNOWN RESOURCE -> 404 Not Found
+============================================================
+$ curl.exe -v -s http://127.0.0.1:5050/orders/ord_does_not_exist -H Authorization: Bearer student-token-curl
+
+*   Trying 127.0.0.1:5050...
+* Established connection to 127.0.0.1 (127.0.0.1 port 5050) from 127.0.0.1 port 59104 
+* using HTTP/1.x
+> GET /orders/ord_does_not_exist HTTP/1.1
+
+> Host: 127.0.0.1:5050
+
+> User-Agent: curl/8.21.0
+
+> Accept: */*
+
+> Authorization: Bearer student-token-curl
+
+> 
+
+* Request completely sent off
+< HTTP/1.1 404 NOT FOUND
+
+< Server: Werkzeug/3.1.8 Python/3.14.0
+
+< Date: Tue, 22 Sep 2026 08:39:47 GMT
+
+< Content-Type: application/json
+
+< Content-Length: 159
+
+< X-Content-Type-Options: nosniff
+
+< Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+< Access-Control-Allow-Origin: https://campuseats.example.com
+
+< Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+
+< X-RateLimit-Limit: 60
+
+< X-RateLimit-Remaining: 54
+
+< Connection: close
+
+< 
+
+{ [159 bytes data]
+* shutting down connection #0
+{
+  "detail": "No order with id 'ord_does_not_exist'.",
+  "status": 404,
+  "title": "Order not found",
+  "type": "https://campuseats.example.com/errors/404"
+}
+
+
+============================================================
+7. MISSING AUTHORIZATION HEADER -> 401 Unauthorized
+============================================================
+$ curl.exe -v -s http://127.0.0.1:5050/orders
+
+*   Trying 127.0.0.1:5050...
+* Established connection to 127.0.0.1 (127.0.0.1 port 5050) from 127.0.0.1 port 59105 
+* using HTTP/1.x
+> GET /orders HTTP/1.1
+
+> Host: 127.0.0.1:5050
+
+> User-Agent: curl/8.21.0
+
+> Accept: */*
+
+> 
+
+* Request completely sent off
+< HTTP/1.1 401 UNAUTHORIZED
+
+< Server: Werkzeug/3.1.8 Python/3.14.0
+
+< Date: Tue, 22 Sep 2026 08:39:47 GMT
+
+< Content-Type: application/json
+
+< Content-Length: 165
+
+< WWW-Authenticate: Bearer
+
+< X-Content-Type-Options: nosniff
+
+< Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+< Access-Control-Allow-Origin: https://campuseats.example.com
+
+< Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+
+< Connection: close
+
+< 
+
+{ [165 bytes data]
+* shutting down connection #0
+{
+  "detail": "Missing Authorization header with Bearer token.",
+  "status": 401,
+  "title": "Unauthorized",
+  "type": "https://campuseats.example.com/errors/401"
+}
+
+
