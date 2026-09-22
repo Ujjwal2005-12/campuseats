@@ -7,15 +7,17 @@ talks to the store. This keeps Orders' data ownership self-contained, per
 the Assignment 2 boundary.
 """
 
+import hashlib
+import json
 from models import Order, OrderItem, Cancellation, ALLOWED_TRANSITIONS
 
 # orders: order_id -> Order
 _orders: dict = {}
 
-# idempotency_key -> order_id   (for POST /orders)
+# idempotency_key -> (order_id, payload_hash)   (for POST /orders)
 _create_idempotency: dict = {}
 
-# (order_id, idempotency_key) -> Cancellation   (for POST /orders/{id}/cancellation)
+# (order_id, idempotency_key) -> (Cancellation, payload_hash)   (for POST /orders/{id}/cancellation or /cancel)
 _cancel_idempotency: dict = {}
 
 # cancellations: order_id -> Cancellation
@@ -23,7 +25,7 @@ _cancellations: dict = {}
 
 
 class ConflictError(Exception):
-    """Raised for illegal state transitions / already-cancelled orders (-> 409)."""
+    """Raised for illegal state transitions, duplicate conflicts, or idempotency mismatch (-> 409)."""
     pass
 
 
@@ -32,14 +34,56 @@ class NotFoundError(Exception):
     pass
 
 
+def reset_store() -> None:
+    """Clear all in-memory store data (useful for test isolation)."""
+    _orders.clear()
+    _create_idempotency.clear()
+    _cancel_idempotency.clear()
+    _cancellations.clear()
+
+
+def _hash_payload(payload: dict) -> str:
+    """Compute a deterministic hash for an incoming JSON payload."""
+    if payload is None:
+        return ""
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# ETag calculation
+# ---------------------------------------------------------------------------
+
+def calculate_etag(order: Order) -> str:
+    """
+    Generate a deterministic strong ETag based on the canonical representation
+    of the order. Whenever order state or fields change, this ETag changes.
+    """
+    serialized = json.dumps(order.as_json(), sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()[:16]
+    return f'"{digest}"'
+
+
 # ---------------------------------------------------------------------------
 # Create
 # ---------------------------------------------------------------------------
 
-def create_order(customer_id: str, items: list, notes: str = "", idempotency_key: str = None) -> Order:
-    if idempotency_key and idempotency_key in _create_idempotency:
-        existing_id = _create_idempotency[idempotency_key]
-        return _orders[existing_id]
+def create_order(
+    customer_id: str,
+    items: list,
+    notes: str = "",
+    idempotency_key: str = None,
+    payload: dict = None,
+) -> Order:
+    if idempotency_key:
+        payload_hash = _hash_payload(payload) if payload is not None else ""
+        if idempotency_key in _create_idempotency:
+            existing_id, existing_hash = _create_idempotency[idempotency_key]
+            if payload is not None and existing_hash and payload_hash != existing_hash:
+                raise ConflictError(
+                    f"Idempotency-Key '{idempotency_key}' was previously used with a different request payload."
+                )
+            return _orders[existing_id]
 
     order_items = [OrderItem.from_dict(i) for i in items]
     order = Order(customer_id=customer_id, items=order_items, notes=notes)
@@ -47,7 +91,8 @@ def create_order(customer_id: str, items: list, notes: str = "", idempotency_key
 
     _orders[order.order_id] = order
     if idempotency_key:
-        _create_idempotency[idempotency_key] = order.order_id
+        payload_hash = _hash_payload(payload) if payload is not None else ""
+        _create_idempotency[idempotency_key] = (order.order_id, payload_hash)
 
     return order
 
@@ -65,6 +110,48 @@ def get_order(order_id: str) -> Order:
 
 def list_orders_by_customer(customer_id: str) -> list:
     return [o for o in _orders.values() if o.customer_id == customer_id]
+
+
+def list_orders(
+    customer_id: str = None,
+    status: str = None,
+    sort_by: str = "createdAt",
+    order: str = "desc",
+    page: int = 1,
+    page_size: int = 10,
+) -> tuple[list, int]:
+    """
+    Query orders with filtering, sorting, and pagination.
+    Returns (paginated_orders, total_count).
+    """
+    results = list(_orders.values())
+
+    if customer_id:
+        results = [o for o in results if o.customer_id == customer_id]
+
+    if status:
+        results = [o for o in results if o.status == status]
+
+    # Sorting
+    sort_keys = {
+        "createdAt": lambda o: o.created_at,
+        "totalAmount": lambda o: o.total_amount,
+        "orderId": lambda o: o.order_id,
+        "status": lambda o: o.status,
+        "customerId": lambda o: o.customer_id,
+    }
+    key_func = sort_keys.get(sort_by, lambda o: o.created_at)
+    reverse = (order.lower() == "desc")
+    results.sort(key=key_func, reverse=reverse)
+
+    total_count = len(results)
+
+    # Pagination
+    start = (page - 1) * page_size
+    end = start + page_size
+    paginated = results[start:end]
+
+    return paginated, total_count
 
 
 # ---------------------------------------------------------------------------
@@ -87,12 +174,24 @@ def update_status(order_id: str, new_status: str) -> Order:
 # Cancellation (sub-resource)
 # ---------------------------------------------------------------------------
 
-def cancel_order(order_id: str, reason: str, idempotency_key: str = None) -> Cancellation:
+def cancel_order(
+    order_id: str,
+    reason: str,
+    idempotency_key: str = None,
+    payload: dict = None,
+) -> Cancellation:
     order = get_order(order_id)  # raises NotFoundError if missing
 
     cache_key = (order_id, idempotency_key)
+    payload_hash = _hash_payload(payload) if payload is not None else ""
+
     if idempotency_key and cache_key in _cancel_idempotency:
-        return _cancel_idempotency[cache_key]
+        cached_cancel, existing_hash = _cancel_idempotency[cache_key]
+        if payload is not None and existing_hash and payload_hash != existing_hash:
+            raise ConflictError(
+                f"Idempotency-Key '{idempotency_key}' was previously used for order '{order_id}' with a different request payload."
+            )
+        return cached_cancel
 
     if order.status in ("cancelled", "delivered"):
         raise ConflictError(
@@ -108,6 +207,6 @@ def cancel_order(order_id: str, reason: str, idempotency_key: str = None) -> Can
 
     _cancellations[order_id] = cancellation
     if idempotency_key:
-        _cancel_idempotency[cache_key] = cancellation
+        _cancel_idempotency[cache_key] = (cancellation, payload_hash)
 
     return cancellation
