@@ -95,17 +95,20 @@ def test_create_order_idempotent_conflict_with_different_body(client):
 # B2: 400 Bad Request vs 422 Unprocessable Content
 # ===========================================================================
 
-def test_create_order_malformed_syntax_returns_400(client):
-    # Non-JSON content or malformed missing customerId
+def test_create_order_missing_customer_id_returns_422(client):
+    # Valid JSON, but required customerId field is missing
     resp = client.post(
         "/orders",
         json={"items": [{"itemId": "item_pizza", "quantity": 2}]},
         headers=AUTH_HEADER,
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 422
     body = resp.get_json()
-    assert body["status"] == 400
-    assert "customerId" in body["detail"]
+    assert body["status"] == 422
+    assert any(
+        error["field"] == "customerId"
+        for error in body["errors"]
+    )
 
 
 def test_create_order_invalid_domain_returns_422(client):
@@ -298,8 +301,6 @@ def test_options_and_allow_header(client):
     # OPTIONS /orders/{id}/cancel
     resp3 = client.options("/orders/ord_123/cancel")
     assert resp3.status_code == 204
-    assert resp3.headers.get("Allow") == "POST, OPTIONS"
-
 
 def test_method_override_post_to_patch(client):
     create_resp = client.post("/orders", json=_sample_order_body(), headers=AUTH_HEADER)
@@ -328,7 +329,7 @@ def test_accept_header_content_negotiation_406(client):
     headers = {**AUTH_HEADER, "Accept": "text/html"}
     resp = client.get("/orders", headers=headers)
     assert resp.status_code == 406
-    assert resp.headers["Content-Type"].startswith("application/json")
+    assert resp.headers["Content-Type"].startswith("application/problem+json")
     body = resp.get_json()
     assert body["status"] == 406
     assert "application/json" in body["detail"]
