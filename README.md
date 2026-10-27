@@ -167,9 +167,25 @@ The system's main resources and operations are documented in `brief.md`.
 
 ## Status
 
-
-
 This repository contains the completed documentation for the HTTP, browser Network, Git setup, and CampusEats system brief assignment.
 
+---
 
+## Assignment 7 — Build one CampusEats service in GraphQL
 
+The GraphQL service implementation for Assignment 7 is located in [`assignment7-graphql/`](./assignment7-graphql/):
+- **GraphQL Schema:** [`assignment7-graphql/schema.graphql`](./assignment7-graphql/schema.graphql)
+- **Apollo Server & Resolvers:** [`assignment7-graphql/server.js`](./assignment7-graphql/server.js) + [`assignment7-graphql/db.js`](./assignment7-graphql/db.js)
+- **MySQL Database & Seed:** [`assignment7-graphql/schema.sql`](./assignment7-graphql/schema.sql)
+- **Frontend Dashboard:** [`assignment7-graphql/public/index.html`](./assignment7-graphql/public/index.html)
+- **Documentation & Questions:** [`assignment7-graphql/README.md`](./assignment7-graphql/README.md)
+- **Screenshots:** [`assignment7-graphql/screenshots/`](./assignment7-graphql/screenshots/)
+- **Demo Script:** [`assignment7-graphql/DEMO.md`](./assignment7-graphql/DEMO.md)
+
+To run the GraphQL service:
+```bash
+cd assignment7-graphql
+npm install
+npm start
+```
+Frontend runs at `http://localhost:4000/` and GraphQL endpoint is at `http://localhost:4000/graphql`.

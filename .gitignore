@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment files
+.env
+*/.env
+
+# Python artifacts
+__pycache__/
+*/__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS metadata
+.DS_Store
+Thumbs.db
