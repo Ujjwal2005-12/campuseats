@@ -1,0 +1,225 @@
+CS543 Assignment 6 — Orders Service Curl Transcript
+Base URL: http://127.0.0.1:5050
+Generated: Mon Oct 12 19:59:01 IST 2026
+
+==================================================
+D1 — Create order (happy path)
+==================================================
+$ curl -i -X POST http://127.0.0.1:5050/orders -H Authorization: Bearer test-token -H Content-Type: application/json -H Accept: application/json -H Idempotency-Key: a6-transcript-create-001 -d {"customerId":"cust_001","items":[{"itemId":"item_pizza","quantity":2}],"address":"123 Main Street"}
+HTTP/1.1 201 CREATED
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Mon, 12 Oct 2026 14:29:01 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 264
+Vary: Accept
+Location: /orders/ord_7df2bca9bd2d
+ETag: "b72cc29c722bbba3"
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: https://campuseats.example.com
+Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 59
+Connection: close
+
+{
+  "createdAt": "2026-10-12T14:29:01.125154+00:00",
+  "customerId": "cust_001",
+  "items": [
+    {
+      "itemId": "item_pizza",
+      "quantity": 2,
+      "unitPrice": 0.0
+    }
+  ],
+  "orderId": "ord_7df2bca9bd2d",
+  "status": "created",
+  "totalAmount": 0.0
+}
+
+
+==================================================
+D2.1 — Empty cart validation
+==================================================
+$ curl -i -X POST http://127.0.0.1:5050/orders -H Authorization: Bearer test-token -H Content-Type: application/json -H Accept: application/json -d {"customerId":"cust_001","items":[],"address":"123 Main Street"}
+HTTP/1.1 422 UNPROCESSABLE ENTITY
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Mon, 12 Oct 2026 14:29:01 GMT
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 290
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: https://campuseats.example.com
+Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 58
+Connection: close
+
+{"type": "https://campuseats.example.com/problems/empty-cart", "title": "Cart is empty", "status": 422, "detail": "items must be a non-empty array; an order must contain at least one item.", "instance": "/orders", "errors": [{"field": "items", "message": "must contain at least one item"}]}
+
+==================================================
+D2.2 — Quantity zero validation
+==================================================
+$ curl -i -X POST http://127.0.0.1:5050/orders -H Authorization: Bearer test-token -H Content-Type: application/json -H Accept: application/json -d {"customerId":"cust_001","items":[{"itemId":"item_pizza","quantity":0}],"address":"123 Main Street"}
+HTTP/1.1 422 UNPROCESSABLE ENTITY
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Mon, 12 Oct 2026 14:29:01 GMT
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 258
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: https://campuseats.example.com
+Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 57
+Connection: close
+
+{"type": "https://campuseats.example.com/problems/validation-error", "title": "Validation failed", "status": 422, "detail": "1 field failed validation.", "instance": "/orders", "errors": [{"field": "items[0].quantity", "message": "must be an integer >= 1"}]}
+
+==================================================
+D2.3 — Unknown order
+==================================================
+$ curl -i http://127.0.0.1:5050/orders/ord_does_not_exist -H Authorization: Bearer test-token -H Accept: application/json
+HTTP/1.1 404 NOT FOUND
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Mon, 12 Oct 2026 14:29:01 GMT
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 204
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: https://campuseats.example.com
+Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 56
+Connection: close
+
+{"type": "https://campuseats.example.com/problems/order-not-found", "title": "Order not found", "status": 404, "detail": "No order with id 'ord_does_not_exist'.", "instance": "/orders/ord_does_not_exist"}
+
+==================================================
+D3 — Request XML representation
+==================================================
+$ curl -i http://127.0.0.1:5050/orders -H Authorization: Bearer test-token -H Accept: application/xml
+HTTP/1.1 200 OK
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Mon, 12 Oct 2026 14:29:01 GMT
+Content-Type: application/xml; charset=utf-8
+Content-Length: 351
+Vary: Accept
+X-Total-Count: 1
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: https://campuseats.example.com
+Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 55
+Connection: close
+
+<?xml version="1.0" encoding="UTF-8"?>
+<orders><order><orderId>ord_7df2bca9bd2d</orderId><customerId>cust_001</customerId><items><item><itemId>item_pizza</itemId><quantity>2</quantity><unitPrice>0.0</unitPrice></item></items><status>created</status><totalAmount>0.0</totalAmount><createdAt>2026-10-12T14:29:01.125154+00:00</createdAt></order></orders>
+
+==================================================
+D4.1 — Idempotency repeat (same key, same request)
+==================================================
+HTTP/1.1 201 CREATED
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Mon, 12 Oct 2026 14:31:52 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 264
+Vary: Accept
+Location: /orders/ord_7df2bca9bd2d
+ETag: "b72cc29c722bbba3"
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: https://campuseats.example.com
+Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 58
+Connection: close
+
+{
+  "createdAt": "2026-10-12T14:29:01.125154+00:00",
+  "customerId": "cust_001",
+  "items": [
+    {
+      "itemId": "item_pizza",
+      "quantity": 2,
+      "unitPrice": 0.0
+    }
+  ],
+  "orderId": "ord_7df2bca9bd2d",
+  "status": "created",
+  "totalAmount": 0.0
+}
+
+==================================================
+D2.5 — Rate limit response (429 + Retry-After)
+==================================================
+HTTP/1.1 429 TOO MANY REQUESTS
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Mon, 12 Oct 2026 14:34:08 GMT
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 210
+Retry-After: 52
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 0
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: https://campuseats.example.com
+Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+Connection: close
+
+{"type": "https://campuseats.example.com/problems/rate-limited", "title": "Too Many Requests", "status": 429, "detail": "Rate limit of 60 requests per minute exceeded. Try again in 52s.", "instance": "/orders"}
+
+
+==================================================
+D2.4 — Illegal status transition (409 Conflict)
+==================================================
+HTTP/1.1 409 CONFLICT
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Mon, 12 Oct 2026 14:37:14 GMT
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 244
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: https://campuseats.example.com
+Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 59
+Connection: close
+
+{"type": "https://campuseats.example.com/problems/illegal-transition", "title": "Invalid status transition", "status": 409, "detail": "Cannot move order 'ord_7df2bca9bd2d' from 'created' to 'delivered'.", "instance": "/orders/ord_7df2bca9bd2d"}
+
+==================================================
+D4.2 — Transient storage failure (503 + Retry-After)
+==================================================
+$ curl -i http://127.0.0.1:5051/orders/_fault -H "Authorization: Bearer test-token" -H "Accept: application/json"
+HTTP/1.1 503 SERVICE UNAVAILABLE
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Mon, 12 Oct 2026 14:47:43 GMT
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 240
+Retry-After: 5
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: https://campuseats.example.com
+Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 59
+Connection: close
+
+{"type": "https://campuseats.example.com/problems/service-unavailable", "title": "Service temporarily unavailable", "status": 503, "detail": "The orders store is temporarily unavailable. Please retry shortly.", "instance": "/orders/_fault"}
+
+==================================================
+D4.1 — Idempotency repeat (same key, same request)
+==================================================
+$ curl -i -X POST http://127.0.0.1:5050/orders -H "Authorization: Bearer test-token" -H "Content-Type: application/json" -H "Accept: application/json" -H "Idempotency-Key: a6-transcript-create-001" -d '{"customerId":"cust_001","items":[{"itemId":"item_pizza","quantity":2}],"address":"123 Main Street"}'
+

@@ -1,30 +1,27 @@
 openapi: 3.0.3
 info:
   title: CampusEats Orders Service
-  description: >
-    Manages customer orders for CampusEats. Rebuilt as a REST API and updated for
-    Assignment 5: HTTP Methods & Headers, covering strict verb usage, query parameters
-    for reads, OPTIONS and Allow headers, X-HTTP-Method-Override, content negotiation,
-    Authorization, deterministic ETags, conditional requests (304 / 412), idempotency
-    conflict resolution (409), per-client rate limiting (429), CORS, and security headers.
-  version: 2.0.0
+  description:
+    "CampusEats Orders Service. Updated for Assignment 6: honest HTTP status codes, RFC 7807 Problem
+    Details, field-level validation, UTF-8 response content types, JSON/XML content negotiation, Retry-After, and
+    safe error handling. Existing Assignment 5 features such as authorization, ETags, idempotency, rate limiting,
+    CORS, and security headers are retained."
+  version: 2.1.0
   contact:
-    name: "CampusEats Engineering Team"
-
+    name: CampusEats Engineering Team
 servers:
   - url: http://localhost:5050
     description: Local development server
-
 tags:
   - name: Orders
     description: Order lifecycle and query operations
   - name: Cancellations
     description: Non-CRUD order cancellation operations
-
 paths:
   /orders:
     post:
-      tags: [Orders]
+      tags:
+        - Orders
       operationId: createOrder
       summary: Create a new order
       parameters:
@@ -38,7 +35,9 @@ paths:
               $ref: "#/components/schemas/OrderCreateRequest"
       responses:
         "201":
-          description: Order created successfully
+          description:
+            Order created successfully Supports application/json (default) and application/xml when requested
+            via Accept. Responses are UTF-8.
           headers:
             Location:
               $ref: "#/components/headers/Location"
@@ -56,6 +55,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Order"
+            application/xml:
+              schema:
+                type: string
+              example: <order><orderId>ord_58dfd44cd4a7</orderId><status>created</status></order>
         "400":
           $ref: "#/components/responses/Problem400"
         "401":
@@ -63,21 +66,32 @@ paths:
         "406":
           $ref: "#/components/responses/Problem406"
         "409":
-          description: Idempotency conflict (key reused with different payload)
+          description: "Conflict: illegal-transition, item-unavailable, or idempotency conflict; Problem Details."
           headers:
             X-Content-Type-Options:
               $ref: "#/components/headers/X-Content-Type-Options"
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
         "422":
           $ref: "#/components/responses/Problem422"
         "429":
           $ref: "#/components/responses/Problem429"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+        "402":
+          $ref: "#/components/responses/Problem402"
+      description:
+        Validates the entire request before creating an order. Invalid fields are returned together in
+        a 422 Problem Details response with errors[]. A successful creation returns 201 and Location.
     get:
-      tags: [Orders]
+      tags:
+        - Orders
       operationId: listOrders
       summary: List, filter, sort, and paginate orders
       parameters:
@@ -90,7 +104,9 @@ paths:
         - $ref: "#/components/parameters/PageSizeQuery"
       responses:
         "200":
-          description: List of matching orders
+          description:
+            List of matching orders Supports application/json (default) and application/xml when requested
+            via Accept. Responses are UTF-8.
           headers:
             X-Total-Count:
               schema:
@@ -110,6 +126,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Order"
+            application/xml:
+              schema:
+                type: string
+              example: <order><orderId>ord_58dfd44cd4a7</orderId><status>created</status></order>
         "400":
           $ref: "#/components/responses/Problem400"
         "401":
@@ -118,9 +138,18 @@ paths:
           $ref: "#/components/responses/Problem406"
         "429":
           $ref: "#/components/responses/Problem429"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+      description:
+        "Lists orders with optional filters, sorting, and pagination. Supports JSON by default or XML
+        when Accept: application/xml is supplied."
     options:
-      tags: [Orders]
+      tags:
+        - Orders
       operationId: optionsOrders
       summary: Inspect allowed methods and CORS preflight for /orders
       responses:
@@ -135,10 +164,16 @@ paths:
               $ref: "#/components/headers/Access-Control-Allow-Methods"
             Access-Control-Allow-Headers:
               $ref: "#/components/headers/Access-Control-Allow-Headers"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
   /orders/{orderId}:
     get:
-      tags: [Orders]
+      tags:
+        - Orders
       operationId: getOrder
       summary: Retrieve a single order by id with caching and conditional GET
       parameters:
@@ -147,7 +182,9 @@ paths:
         - $ref: "#/components/parameters/IfNoneMatchHeader"
       responses:
         "200":
-          description: The requested order representation
+          description:
+            The requested order representation Supports application/json (default) and application/xml
+            when requested via Accept. Responses are UTF-8.
           headers:
             ETag:
               $ref: "#/components/headers/ETag"
@@ -165,6 +202,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Order"
+            application/xml:
+              schema:
+                type: string
+              example: <order><orderId>ord_58dfd44cd4a7</orderId><status>created</status></order>
         "304":
           description: Not Modified — representation matches client If-None-Match header
           headers:
@@ -184,9 +225,18 @@ paths:
           $ref: "#/components/responses/Problem406"
         "429":
           $ref: "#/components/responses/Problem429"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+      description:
+        "Retrieves one order by id. Supports JSON by default or XML when Accept: application/xml is supplied.
+        Unknown ids return 404 with type order-not-found."
     patch:
-      tags: [Orders]
+      tags:
+        - Orders
       operationId: updateOrderStatus
       summary: Update order status with conditional write (If-Match)
       parameters:
@@ -227,30 +277,39 @@ paths:
         "406":
           $ref: "#/components/responses/Problem406"
         "409":
-          description: Invalid status transition
+          description: "Conflict: illegal-transition, item-unavailable, or idempotency conflict; Problem Details."
           headers:
             X-Content-Type-Options:
               $ref: "#/components/headers/X-Content-Type-Options"
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
         "412":
-          description: Precondition Failed — If-Match does not match current ETag
+          description: Precondition Failed — If-Match does not match current ETag. UTF-8 Problem Details response.
           headers:
             X-Content-Type-Options:
               $ref: "#/components/headers/X-Content-Type-Options"
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
         "422":
           $ref: "#/components/responses/Problem422"
         "429":
           $ref: "#/components/responses/Problem429"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+      description:
+        Updates an order status. Invalid request fields return 422; an illegal state transition returns
+        409 with type illegal-transition.
     options:
-      tags: [Orders]
+      tags:
+        - Orders
       operationId: optionsOrderItem
       summary: Inspect allowed methods and CORS preflight for /orders/{orderId}
       parameters:
@@ -267,10 +326,39 @@ paths:
               $ref: "#/components/headers/Access-Control-Allow-Methods"
             Access-Control-Allow-Headers:
               $ref: "#/components/headers/Access-Control-Allow-Headers"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
+    delete:
+      tags:
+        - Orders
+      operationId: deleteOrder
+      summary: Delete an order by id
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/AuthorizationHeader"
+      responses:
+        "204":
+          description: Order deleted successfully; response has no body.
+        "401":
+          $ref: "#/components/responses/Problem401"
+        "404":
+          $ref: "#/components/responses/Problem404"
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "429":
+          $ref: "#/components/responses/Problem429"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
   /orders/{orderId}/cancel:
     post:
-      tags: [Cancellations]
+      tags:
+        - Cancellations
       operationId: cancelOrder
       summary: Cancel an order via non-CRUD sub-resource
       parameters:
@@ -285,7 +373,9 @@ paths:
               $ref: "#/components/schemas/CancellationRequest"
       responses:
         "201":
-          description: Order cancellation record created
+          description:
+            Order cancellation record created Supports application/json (default) and application/xml
+            when requested via Accept. Responses are UTF-8.
           headers:
             X-RateLimit-Limit:
               $ref: "#/components/headers/X-RateLimit-Limit"
@@ -299,6 +389,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CancellationResponse"
+            application/xml:
+              schema:
+                type: string
+              example: <order><orderId>ord_58dfd44cd4a7</orderId><status>created</status></order>
         "400":
           $ref: "#/components/responses/Problem400"
         "401":
@@ -308,21 +402,27 @@ paths:
         "406":
           $ref: "#/components/responses/Problem406"
         "409":
-          description: Order cannot be cancelled (already cancelled or delivered)
+          description: "Conflict: illegal-transition, item-unavailable, or idempotency conflict; Problem Details."
           headers:
             X-Content-Type-Options:
               $ref: "#/components/headers/X-Content-Type-Options"
           content:
-            application/json:
+            application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
         "422":
           $ref: "#/components/responses/Problem422"
         "429":
           $ref: "#/components/responses/Problem429"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
     options:
-      tags: [Cancellations]
+      tags:
+        - Cancellations
       operationId: optionsCancelOrder
       summary: Inspect allowed methods and CORS preflight for cancellation
       parameters:
@@ -339,10 +439,16 @@ paths:
               $ref: "#/components/headers/Access-Control-Allow-Methods"
             Access-Control-Allow-Headers:
               $ref: "#/components/headers/Access-Control-Allow-Headers"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
   /orders/{orderId}/cancellation:
     post:
-      tags: [Cancellations]
+      tags:
+        - Cancellations
       operationId: cancelOrderAlias
       summary: Cancel an order (Assignment 4 backwards-compatible alias)
       parameters:
@@ -357,11 +463,17 @@ paths:
               $ref: "#/components/schemas/CancellationRequest"
       responses:
         "201":
-          description: Order cancellation record created
+          description:
+            Order cancellation record created Supports application/json (default) and application/xml
+            when requested via Accept. Responses are UTF-8.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CancellationResponse"
+            application/xml:
+              schema:
+                type: string
+              example: <order><orderId>ord_58dfd44cd4a7</orderId><status>created</status></order>
         "400":
           $ref: "#/components/responses/Problem400"
         "401":
@@ -376,9 +488,15 @@ paths:
           $ref: "#/components/responses/Problem422"
         "429":
           $ref: "#/components/responses/Problem429"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
     options:
-      tags: [Cancellations]
+      tags:
+        - Cancellations
       operationId: optionsCancelOrderAlias
       summary: Inspect allowed methods and CORS preflight for cancellation alias
       parameters:
@@ -389,14 +507,19 @@ paths:
           headers:
             Allow:
               $ref: "#/components/headers/Allow"
-
+        "405":
+          $ref: "#/components/responses/Problem405"
+        "500":
+          $ref: "#/components/responses/Problem500"
+        "503":
+          $ref: "#/components/responses/Problem503"
 components:
   headers:
     Location:
       description: URI of newly created resource
       schema:
         type: string
-        example: "/orders/ord_58dfd44cd4a7"
+        example: /orders/ord_58dfd44cd4a7
     ETag:
       description: Deterministic resource representation hash (strong ETag)
       schema:
@@ -406,12 +529,12 @@ components:
       description: Directives for caching mechanisms
       schema:
         type: string
-        example: "private, no-cache"
+        example: private, no-cache
     Allow:
       description: Supported HTTP methods for the targeted resource
       schema:
         type: string
-        example: "GET, PATCH, OPTIONS"
+        example: GET, PATCH, OPTIONS
     X-RateLimit-Limit:
       description: Maximum request quota per window
       schema:
@@ -423,7 +546,9 @@ components:
         type: integer
         example: 59
     Retry-After:
-      description: Seconds client must wait before retrying when 429 is returned
+      description:
+        Seconds the client should wait before retrying after a 429 Too Many Requests or 503 Service Unavailable
+        response.
       schema:
         type: integer
         example: 45
@@ -431,28 +556,27 @@ components:
       description: Permitted cross-origin domain
       schema:
         type: string
-        example: "https://campuseats.example.com"
+        example: https://campuseats.example.com
     Access-Control-Allow-Methods:
       description: Permitted cross-origin methods
       schema:
         type: string
-        example: "GET, POST, PATCH, OPTIONS"
+        example: GET, POST, PATCH, OPTIONS
     Access-Control-Allow-Headers:
       description: Permitted request headers in preflight
       schema:
         type: string
-        example: "Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override"
+        example: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
     X-Content-Type-Options:
       description: Security header preventing MIME sniffing
       schema:
         type: string
-        example: "nosniff"
+        example: nosniff
     Strict-Transport-Security:
       description: Enforces HTTPS communication
       schema:
         type: string
-        example: "max-age=31536000; includeSubDomains"
-
+        example: max-age=31536000; includeSubDomains
   parameters:
     OrderId:
       name: orderId
@@ -461,8 +585,7 @@ components:
       description: Unique identifier of the order
       schema:
         type: string
-        example: "ord_58dfd44cd4a7"
-
+        example: ord_58dfd44cd4a7
     AuthorizationHeader:
       name: Authorization
       in: header
@@ -470,8 +593,7 @@ components:
       description: Bearer token for client authentication and rate-limiting identity
       schema:
         type: string
-        example: "Bearer student-token-123"
-
+        example: Bearer student-token-123
     IdempotencyKeyHeader:
       name: Idempotency-Key
       in: header
@@ -479,8 +601,7 @@ components:
       description: Client-supplied key to safely retry non-idempotent operations without duplicates
       schema:
         type: string
-        example: "idem-abc-12345"
-
+        example: idem-abc-12345
     IfMatchHeader:
       name: If-Match
       in: header
@@ -489,7 +610,6 @@ components:
       schema:
         type: string
         example: '"625c7f4b13b401ec"'
-
     IfNoneMatchHeader:
       name: If-None-Match
       in: header
@@ -498,7 +618,6 @@ components:
       schema:
         type: string
         example: '"625c7f4b13b401ec"'
-
     XHTTPMethodOverrideHeader:
       name: X-HTTP-Method-Override
       in: header
@@ -506,9 +625,11 @@ components:
       description: Fallback header for constrained clients to override POST to PUT/PATCH/DELETE
       schema:
         type: string
-        enum: [PUT, PATCH, DELETE]
-        example: "PATCH"
-
+        enum:
+          - PUT
+          - PATCH
+          - DELETE
+        example: PATCH
     CustomerIdQuery:
       name: customerId
       in: query
@@ -516,8 +637,7 @@ components:
       description: Filter orders by customer ID
       schema:
         type: string
-        example: "cust_001"
-
+        example: cust_001
     StatusQuery:
       name: status
       in: query
@@ -525,9 +645,14 @@ components:
       description: Filter orders by lifecycle status
       schema:
         type: string
-        enum: [created, confirmed, preparing, dispatched, delivered, cancelled]
-        example: "confirmed"
-
+        enum:
+          - created
+          - confirmed
+          - preparing
+          - dispatched
+          - delivered
+          - cancelled
+        example: confirmed
     SortQuery:
       name: sort
       in: query
@@ -535,9 +660,13 @@ components:
       description: Sort field for order list
       schema:
         type: string
-        enum: [createdAt, totalAmount, orderId, status, customerId]
+        enum:
+          - createdAt
+          - totalAmount
+          - orderId
+          - status
+          - customerId
         default: createdAt
-
     OrderQuery:
       name: order
       in: query
@@ -545,9 +674,10 @@ components:
       description: Sort order direction
       schema:
         type: string
-        enum: [asc, desc]
+        enum:
+          - asc
+          - desc
         default: desc
-
     PageQuery:
       name: page
       in: query
@@ -557,7 +687,6 @@ components:
         type: integer
         minimum: 1
         default: 1
-
     PageSizeQuery:
       name: pageSize
       in: query
@@ -568,31 +697,35 @@ components:
         minimum: 1
         maximum: 100
         default: 10
-
   schemas:
     OrderItem:
       type: object
-      required: [itemId, quantity]
+      required:
+        - itemId
+        - quantity
       properties:
         itemId:
           type: string
-          example: "item_pizza"
+          example: item_pizza
         quantity:
           type: integer
           minimum: 1
           example: 2
+          description: Must be an integer greater than or equal to 1.
         unitPrice:
           type: number
           format: float
-          example: 9.50
-
+          example: 9.5
     OrderCreateRequest:
       type: object
-      required: [customerId, items]
+      required:
+        - customerId
+        - items
+        - address
       properties:
         customerId:
           type: string
-          example: "cust_001"
+          example: cust_001
         items:
           type: array
           minItems: 1
@@ -600,151 +733,200 @@ components:
             $ref: "#/components/schemas/OrderItem"
         notes:
           type: string
-          example: "Extra spicy"
-
+          example: Extra spicy
+        address:
+          type: string
+          minLength: 1
+          description: Delivery address; required when creating an order.
+          example: Hostel Block A, Room 204
     OrderStatusUpdateRequest:
       type: object
-      required: [status]
+      required:
+        - status
       properties:
         status:
           type: string
-          enum: [confirmed, preparing, dispatched, delivered, cancelled]
-          example: "confirmed"
-
+          enum:
+            - confirmed
+            - preparing
+            - dispatched
+            - delivered
+            - cancelled
+          example: confirmed
     CancellationRequest:
       type: object
-      required: [reason]
+      required:
+        - reason
       properties:
         reason:
           type: string
-          example: "Ordered wrong canteen stall"
-
+          example: Ordered wrong canteen stall
     CancellationResponse:
       type: object
       properties:
         orderId:
           type: string
-          example: "ord_58dfd44cd4a7"
+          example: ord_58dfd44cd4a7
         status:
           type: string
-          enum: [cancelled]
+          enum:
+            - cancelled
         reason:
           type: string
-          example: "Ordered wrong canteen stall"
+          example: Ordered wrong canteen stall
         cancelledAt:
           type: string
           format: date-time
-
     Order:
       type: object
       properties:
         orderId:
           type: string
-          example: "ord_58dfd44cd4a7"
+          example: ord_58dfd44cd4a7
         customerId:
           type: string
-          example: "cust_001"
+          example: cust_001
         items:
           type: array
           items:
             $ref: "#/components/schemas/OrderItem"
         status:
           type: string
-          enum: [created, confirmed, preparing, dispatched, delivered, cancelled]
-          example: "created"
+          enum:
+            - created
+            - confirmed
+            - preparing
+            - dispatched
+            - delivered
+            - cancelled
+          example: created
         totalAmount:
           type: number
           format: float
-          example: 19.00
+          example: 19.0
         createdAt:
           type: string
           format: date-time
-
     Problem:
       type: object
-      description: RFC 7807 problem details specification
-      required: [type, title, status, detail]
+      description:
+        RFC 7807-style Problem Details response. Responses use Content-Type application/problem+json;
+        charset=utf-8. The type URI ends with a stable slug such as empty-cart, item-unavailable, payment-declined,
+        order-not-found, or illegal-transition.
+      required:
+        - type
+        - title
+        - status
+        - detail
       properties:
         type:
           type: string
-          example: "https://campuseats.example.com/errors/400"
+          format: uri
+          description: Stable URI identifying the problem type.
+          example: https://campuseats.example.com/errors/order-not-found
         title:
           type: string
-          example: "Bad Request"
+          example: Order Not Found
         status:
           type: integer
-          example: 400
+          minimum: 400
+          maximum: 599
+          example: 404
         detail:
           type: string
-          example: "Request body must be valid JSON."
-
+          example: No order exists with the supplied order id.
+        errors:
+          type: array
+          description: Field-level validation errors; present when one or more fields are invalid.
+          items:
+            $ref: "#/components/schemas/ValidationError"
+      example:
+        type: https://campuseats.example.com/errors/validation-error
+        title: Validation Failed
+        status: 422
+        detail: One or more fields are invalid.
+        errors:
+          - field: items
+            message: At least one item is required.
+          - field: address
+            message: Address is required.
+    ValidationError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          example: items[0].quantity
+        message:
+          type: string
+          example: Quantity must be an integer greater than or equal to 1.
   responses:
     Problem400:
-      description: Malformed syntax or invalid query parameters
+      description: Malformed syntax or invalid query parameters Body is UTF-8.
       headers:
         X-Content-Type-Options:
           $ref: "#/components/headers/X-Content-Type-Options"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
-
     Problem401:
-      description: Missing or invalid Authorization Bearer token
+      description: Missing or invalid Authorization Bearer token Body is UTF-8.
       headers:
         WWW-Authenticate:
           schema:
             type: string
-            example: "Bearer"
+            example: Bearer
         X-Content-Type-Options:
           $ref: "#/components/headers/X-Content-Type-Options"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
-
     Problem404:
-      description: Requested resource was not found
+      description: Requested order was not found; uses the stable type slug order-not-found. UTF-8 Problem Details.
       headers:
         X-Content-Type-Options:
           $ref: "#/components/headers/X-Content-Type-Options"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
-
     Problem406:
-      description: Not Acceptable — client Accept header does not allow application/json
+      description: Not Acceptable — client Accept header does not allow application/json Body is UTF-8.
       headers:
         X-Content-Type-Options:
           $ref: "#/components/headers/X-Content-Type-Options"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
-
     Problem409:
-      description: State conflict or idempotency conflict
+      description:
+        Conflict such as illegal-transition, item-unavailable, or an idempotency key reused with a different
+        payload. UTF-8 Problem Details.
       headers:
         X-Content-Type-Options:
           $ref: "#/components/headers/X-Content-Type-Options"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
-
     Problem422:
-      description: Unprocessable Content — syntactically valid JSON failing domain rules
+      description:
+        Validation failure with one or more field-level errors in errors[]. Common type slugs include
+        empty-cart; invalid quantities and missing address are reported as field errors. UTF-8 Problem Details.
       headers:
         X-Content-Type-Options:
           $ref: "#/components/headers/X-Content-Type-Options"
       content:
-        application/json:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
-
     Problem429:
-      description: Too Many Requests — per-client rate limit budget exceeded
+      description: Too Many Requests — per-client rate limit budget exceeded Body is UTF-8.
       headers:
         Retry-After:
           $ref: "#/components/headers/Retry-After"
@@ -755,6 +937,46 @@ components:
         X-Content-Type-Options:
           $ref: "#/components/headers/X-Content-Type-Options"
       content:
-        application/json:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Problem405:
+      description: Method not allowed for this resource. Problem Details body is UTF-8.
+      headers:
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Problem500:
+      description:
+        Unexpected internal server error; implementation details are not exposed. Problem Details body
+        is UTF-8.
+      headers:
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Problem503:
+      description: Service temporarily unavailable; retry after the indicated delay. Problem Details body is UTF-8.
+      headers:
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+        Retry-After:
+          $ref: "#/components/headers/Retry-After"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Problem402:
+      description: Payment was declined; uses the stable type slug payment-declined. UTF-8 Problem Details.
+      headers:
+        X-Content-Type-Options:
+          $ref: "#/components/headers/X-Content-Type-Options"
+      content:
+        application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
