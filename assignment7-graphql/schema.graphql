@@ -1,0 +1,36 @@
+"""
+GraphQL Schema for CampusEats Menu Service
+Assignment 7 - CS543 Web Services
+"""
+
+type Dish {
+  id: ID!
+  name: String!
+  price: Float!
+  available: Boolean!
+}
+
+input AddDishInput {
+  name: String!
+  price: Float!
+  available: Boolean = true
+}
+
+type Query {
+  """
+  Retrieve all dishes available in the CampusEats catalog.
+  """
+  dishes: [Dish!]!
+
+  """
+  Retrieve a specific dish by its unique database ID.
+  """
+  dish(id: ID!): Dish
+}
+
+type Mutation {
+  """
+  Add a new dish to the CampusEats menu and persist it in MySQL.
+  """
+  addDish(input: AddDishInput!): Dish!
+}
