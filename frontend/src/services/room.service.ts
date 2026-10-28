@@ -1,4 +1,4 @@
-﻿import { api } from './api';
+import { api } from './api';
 import { Room } from '../types';
 import { DEMO_ROOMS } from './demoData';
 
@@ -11,7 +11,7 @@ export const roomService = {
       if (params?.minCapacity) query.append('minCapacity', params.minCapacity.toString());
 
       const res = await api.get<{ rooms: any[] }>(`/rooms?${query.toString()}`);
-      if (res.rooms && Array.isArray(res.rooms) && res.rooms.length > 0) {
+      if (res.rooms && Array.isArray(res.rooms)) {
         return res.rooms.map((r, i) => ({
           ...DEMO_ROOMS[i % DEMO_ROOMS.length],
           id: r.id,

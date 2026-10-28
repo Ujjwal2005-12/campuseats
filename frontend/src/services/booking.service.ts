@@ -1,4 +1,4 @@
-﻿import { api } from './api';
+import { api } from './api';
 import { Booking } from '../types';
 import { DEMO_BOOKINGS } from './demoData';
 
@@ -10,7 +10,7 @@ export const bookingService = {
       if (params?.roomId) query.append('roomId', params.roomId.toString());
 
       const res = await api.get<{ bookings: any[] }>(`/bookings?${query.toString()}`);
-      if (res.bookings && Array.isArray(res.bookings) && res.bookings.length > 0) {
+      if (res.bookings && Array.isArray(res.bookings)) {
         return res.bookings.map((b) => ({
           id: b.id,
           displayId: `REQ-2026-${String(b.id).padStart(3, '0')}`,
@@ -41,7 +41,7 @@ export const bookingService = {
   async getMyBookings(): Promise<Booking[]> {
     try {
       const res = await api.get<{ bookings: any[] }>('/bookings/my');
-      if (res.bookings && Array.isArray(res.bookings) && res.bookings.length > 0) {
+      if (res.bookings && Array.isArray(res.bookings)) {
         return res.bookings.map((b) => ({
           id: b.id,
           displayId: `REQ-2026-${String(b.id).padStart(3, '0')}`,
