@@ -3,17 +3,17 @@
 **Course:** CS543 Web Services · Assignment 7 of 12  
 **Assignment Title:** Build one CampusEats service in GraphQL  
 **Repository:** [https://github.com/Ujjwal2005-12/campuseats.git](https://github.com/Ujjwal2005-12/campuseats.git)  
-**Instructor:** Dr. Pramit Mazumdar · `pramit.mazumdar@iiitvadodara.ac.in`  
+**Instructor:** Dr. Pramit Mazumdar · `pramit.mazumdar@iiitvadodara.ac.in`
 
 ---
 
 ## Team Information
 
-| Name | Roll Number |
-|---|---|
-| Krity Kumari | 2025265101930 |
-| Ujjwal Sharma | 20252651060 |
-| Vinit Gaikwad | 20252651019 |
+| Name           | Roll Number   |
+| -------------- | ------------- |
+| Krity Kumari   | 2025265101930 |
+| Ujjwal Sharma  | 20252651060   |
+| Vinit Gaikwad  | 20252651019   |
 | Shubhag Baluni | 2025265101953 |
 
 ---
@@ -21,8 +21,8 @@
 ## Deliverables & Submission Links
 
 - **Demonstration Video (Google Drive):**  
-  👉 **`[REPLACE WITH GOOGLE DRIVE VIDEO LINK]`**  
-  *(Ensure permission is set to "Anyone with the link can view")*
+ https://drive.google.com/file/d/1sC13oS8a4VmUpJG-mRrvcC51Zp1tXynx/view?usp=sharing
+ 
 
 - **Before-Mutation Screenshot:**  
   [`screenshots/before-mutation.png`](./screenshots/before-mutation.png)
@@ -35,9 +35,11 @@
 ## Required Questions & Answers
 
 ### Question 1: Which CampusEats service did you pick?
+
 We selected the **Menu / Catalogue Service** (`dishes` / `Dish` entity).
 
 **Why this service was chosen:**
+
 1. **Core CampusEats Workflow:** The Menu is the central entry point of CampusEats where students browse canteen offerings, inspect prices, and check item availability.
 2. **Clean Entity Modeling:** The `Dish` entity has well-defined attributes (`id`, `name`, `price`, `available`) that map directly to standard scalar types in GraphQL (`ID!`, `String!`, `Float!`, `Boolean!`).
 3. **Focused CRUD Operations:** It allows straightforward, robust SQL mapping (`SELECT` for list and by-ID queries, `INSERT` for mutations) without coupling to external complex state machines (e.g., payment gateways or delivery order lifecycles).
@@ -73,6 +75,7 @@ We selected the **Menu / Catalogue Service** (`dishes` / `Dish` entity).
 
 - **Which part of the query became the `WHERE` clause:**
   In the single-dish query:
+
   ```graphql
   query {
     dish(id: "3") {
@@ -83,14 +86,17 @@ We selected the **Menu / Catalogue Service** (`dishes` / `Dish` entity).
     }
   }
   ```
+
   The argument `id: ID!` passed into the `dish` query resolver maps directly to the parameter of the SQL `WHERE` clause:
+
   ```javascript
   // server.js - dish resolver
   const rows = await query(
-    'SELECT id, name, price, available FROM dishes WHERE id = ?',
-    [id]
+    "SELECT id, name, price, available FROM dishes WHERE id = ?",
+    [id],
   );
   ```
+
   The client parameter `id = "3"` is passed as a parameterized placeholder `?` to prevent SQL injection.
 
 - **Which resolver ran the `INSERT` statement:**
@@ -98,11 +104,14 @@ We selected the **Menu / Catalogue Service** (`dishes` / `Dish` entity).
   ```javascript
   // server.js - addDish mutation resolver
   const result = await query(
-    'INSERT INTO dishes (name, price, available) VALUES (?, ?, ?)',
-    [name.trim(), parsedPrice, isAvailable]
+    "INSERT INTO dishes (name, price, available) VALUES (?, ?, ?)",
+    [name.trim(), parsedPrice, isAvailable],
   );
   const newId = result.insertId;
-  const rows = await query('SELECT id, name, price, available FROM dishes WHERE id = ?', [newId]);
+  const rows = await query(
+    "SELECT id, name, price, available FROM dishes WHERE id = ?",
+    [newId],
+  );
   return rows[0];
   ```
   The resolver receives the input object, validates the values, executes the SQL `INSERT`, retrieves the generated `insertId`, fetches the stored row from MySQL, and returns the real persisted record.
@@ -153,7 +162,7 @@ assignment7-graphql/
    ```bash
    mysql -u root -p < schema.sql
    ```
-   *(Or without `-p` if root has no password).*
+   _(Or without `-p` if root has no password)._
 3. **Verify Seed Rows:**
    ```sql
    USE campuseats_graphql;
@@ -170,17 +179,22 @@ assignment7-graphql/
 ## Installation & Running
 
 ### 1. Install Dependencies
+
 ```bash
 cd assignment7-graphql
 npm install
 ```
 
 ### 2. Configure Environment
+
 Create `.env` from `.env.example`:
+
 ```bash
 cp .env.example .env
 ```
+
 Ensure database credentials match your MySQL instance:
+
 ```env
 PORT=4000
 DB_HOST=127.0.0.1
@@ -191,10 +205,13 @@ DB_NAME=campuseats_graphql
 ```
 
 ### 3. Start Server
+
 ```bash
 npm start
 ```
+
 The server will output:
+
 ```text
 ✅ Connected to MySQL database successfully.
 ======================================================
@@ -209,24 +226,30 @@ The server will output:
 ## Testing the GraphQL Service
 
 ### 1. Web Application
+
 Open your browser at:
+
 ```
 http://localhost:4000/
 ```
+
 - The initial 4 seed dishes are loaded via GraphQL and displayed as styled cards.
 - Fill the "Add New Dish" form (e.g., Name: `Chole Bhature`, Price: `110`, Available: Checked).
 - Click **"Add Dish to Menu"**.
 - The page fires the `addDish` mutation, displays a green success confirmation, and updates the list to 5 items without a full-page reload.
 
 ### 2. Run Automated E2E Test & Capture Screenshots
+
 ```bash
 npm run test:e2e
 ```
+
 This launches headless Chrome, visits the application, captures `before-mutation.png`, executes the mutation via the UI, and captures `after-mutation.png`.
 
 ### 3. CLI Testing via cURL
 
 **List Dishes Query:**
+
 ```bash
 curl -X POST http://localhost:4000/graphql \
   -H "Content-Type: application/json" \
@@ -234,6 +257,7 @@ curl -X POST http://localhost:4000/graphql \
 ```
 
 **Single Dish Query by ID:**
+
 ```bash
 curl -X POST http://localhost:4000/graphql \
   -H "Content-Type: application/json" \
@@ -241,6 +265,7 @@ curl -X POST http://localhost:4000/graphql \
 ```
 
 **Add Dish Mutation:**
+
 ```bash
 curl -X POST http://localhost:4000/graphql \
   -H "Content-Type: application/json" \
@@ -252,7 +277,76 @@ curl -X POST http://localhost:4000/graphql \
 ## Screenshots
 
 ### Before Mutation (Initial 4 Seed Records)
+
 ![Before Mutation](./screenshots/before-mutation.png)
 
 ### After Mutation (Updated 5 Records with Newly Added Dish)
+
 ![After Mutation](./screenshots/after-mutation.png)
+
+### 8 Assingment
+
+---
+
+# Assignment 8 – CampusEats REST API
+
+**Course:** CS543 Web Services
+
+**Assignment Title:** Build one CampusEats service as a REST API
+
+## 1. Selected Service
+
+We selected the Menu / Catalogue service of CampusEats.
+
+The service manages food items with their ID, name, price and availability.
+
+## 2. REST API Routes
+
+| HTTP Method | Endpoint   | Description                  |
+| ----------- | ---------- | ---------------------------- |
+| GET         | /items     | Retrieve all menu items      |
+| GET         | /items/:id | Retrieve a single item by ID |
+| POST        | /items     | Add a new menu item          |
+
+## 3. HTTP Status Codes
+
+- **200 OK:** Request completed successfully.
+- **201 Created:** New menu item created successfully.
+- **404 Not Found:** Requested item does not exist.
+- **422 Unprocessable Entity:** Required fields are missing or invalid.
+
+## 4. Request Handling
+
+- `req.params.id` is used to retrieve the item ID from the URL.
+- `req.body` is used to access the JSON data sent through POST requests.
+- `express.json()` is middleware that parses incoming JSON request bodies and makes the data available in `req.body`.
+
+## 5. Data Storage
+
+We used an in-memory JavaScript array containing four initial menu records.
+
+New records are added to this array using the POST API.
+
+## 6. Technologies Used
+
+- Node.js
+- Express.js
+- HTML
+- CSS
+- JavaScript
+
+## 7. How to Run
+
+1. Open the assignment7-graphql folder.
+2. Run `npm install`.
+3. Run `npm start`.
+4. Open `http://localhost:4000/` in your browser.
+
+## 8. Screenshots
+
+- Before POST: `screenshots/before.png`
+- After POST: `screenshots/after.png`
+
+## 9. Demonstration Video
+
+Google Drive Link: ADD YOUR VIDEO LINK HERE
