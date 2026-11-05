@@ -22,7 +22,7 @@
 
 - **Demonstration Video (Google Drive):**  
  https://drive.google.com/file/d/1sC13oS8a4VmUpJG-mRrvcC51Zp1tXynx/view?usp=sharing
-  _(Ensure permission is set to "Anyone with the link can view")_
+ 
 
 - **Before-Mutation Screenshot:**  
   [`screenshots/before-mutation.png`](./screenshots/before-mutation.png)
