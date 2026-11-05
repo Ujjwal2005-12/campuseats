@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusEats - REST API</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>CampusEats</h1>
+        <p>Campus Canteen Menu</p>
+        <p>CS543 - Assignment 8 | REST API</p>
+    </header>
+
+    <main>
+
+        <section class="menu-section">
+            <div class="menu-heading">
+                <h2>Menu Items</h2>
+                <button onclick="loadItems()">Refresh</button>
+            </div>
+
+            <p id="count">Loading...</p>
+
+            <div id="menu">
+                Loading menu items...
+            </div>
+        </section>
+
+        <section class="form-section">
+            <h2>Add New Dish</h2>
+
+            <form id="itemForm">
+
+                <label for="name">Dish Name</label>
+                <input type="text" id="name"
+                    placeholder="Enter dish name" required>
+
+                <label for="price">Price (₹)</label>
+                <input type="number" id="price"
+                    placeholder="Enter price"
+                    min="0" step="any" required>
+
+                <div class="available">
+                    <input type="checkbox" id="available" checked>
+                    <label for="available">Available</label>
+                </div>
+
+                <button type="submit">Add Dish</button>
+
+            </form>
+
+            <p id="message"></p>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>CampusEats | CS543 Web Services</p>
+    </footer>
+
+    <script>
+
+        // GET all menu items
+        async function loadItems() {
+
+            const menu = document.getElementById('menu');
+            const count = document.getElementById('count');
+
+            try {
+
+                const response = await fetch('/items');
+                const items = await response.json();
+
+                if (!response.ok) {
+                    throw new Error('Unable to load items');
+                }
+
+                menu.innerHTML = '';
+                count.textContent = 'Total Items: ' + items.length;
+
+                items.forEach(item => {
+
+                    const card = document.createElement('div');
+                    card.className = 'item-card';
+
+                    const name = document.createElement('h3');
+                    name.textContent = item.name;
+
+                    const id = document.createElement('p');
+                    id.textContent = 'ID: ' + item.id;
+
+                    const price = document.createElement('p');
+                    price.textContent = 'Price: ₹' + item.price;
+
+                    const status = document.createElement('p');
+                    status.textContent = item.available
+                        ? 'Available'
+                        : 'Not Available';
+
+                    card.append(name, id, price, status);
+                    menu.appendChild(card);
+
+                });
+
+            } catch (error) {
+                menu.textContent = error.message;
+            }
+        }
+
+
+        // POST a new menu item
+        document.getElementById('itemForm')
+            .addEventListener('submit', async function(event) {
+
+                event.preventDefault();
+
+                const newItem = {
+                    name: document.getElementById('name').value.trim(),
+                    price: Number(document.getElementById('price').value),
+                    available: document.getElementById('available').checked
+                };
+
+                try {
+
+                    const response = await fetch('/items', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(newItem)
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error);
+                    }
+
+                    document.getElementById('message').textContent =
+                        'Dish added successfully!';
+
+                    this.reset();
+                    document.getElementById('available').checked = true;
+
+                    // Refresh menu after adding item
+                    loadItems();
+
+                } catch (error) {
+
+                    document.getElementById('message').textContent =
+                        error.message;
+
+                }
+
+            });
+
+
+        // Load menu when page opens
+        loadItems();
+
+    </script>
+
+</body>
+</html>
