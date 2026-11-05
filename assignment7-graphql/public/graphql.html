@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusEats Menu · GraphQL Service</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #ea580c;
+      --primary-hover: #c2410c;
+      --primary-light: #ffedd5;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --danger-bg: #fee2e2;
+      --danger-text: #991b1b;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3);
+    }
+
+    .brand-text h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
+
+    .brand-text p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .badge.endpoint {
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .badge.course {
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #22c55e;
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1200px;
+      width: 100%;
+      margin: 1.75rem auto;
+      padding: 0 1.5rem;
+      flex: 1;
+    }
+
+    /* Alert / Banner */
+    .alert {
+      padding: 0.85rem 1.2rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .alert.success {
+      display: flex;
+      background-color: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+      font-weight: 600;
+    }
+
+    .alert.error {
+      display: flex;
+      background-color: var(--danger-bg);
+      color: var(--danger-text);
+      border: 1px solid #fca5a5;
+    }
+
+    .alert-close {
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: inherit;
+      padding: 0 0.3rem;
+      line-height: 1;
+    }
+
+    /* Content Layout */
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 1.75rem;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Section: Menu List */
+    .menu-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .panel-title h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .panel-title p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .count-pill {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* Dish Grid */
+    .dish-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
+      padding: 1.5rem;
+    }
+
+    .dish-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.15rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .dish-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: #cbd5e1;
+    }
+
+    .dish-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+      gap: 0.5rem;
+    }
+
+    .dish-id {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #94a3b8;
+      background: #f8fafc;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .status-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+    }
+
+    .status-badge.available {
+      background: var(--success-bg);
+      color: var(--success-text);
+    }
+
+    .status-badge.unavailable {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+    }
+
+    .dish-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+      word-break: break-word;
+    }
+
+    .dish-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 0.85rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border);
+    }
+
+    .price-tag {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .price-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .price-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .dish-query-tag {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      font-family: monospace;
+    }
+
+    /* Empty and Loading States */
+    .empty-state, .loading-state {
+      padding: 3.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state p, .loading-state p {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #e2e8f0;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Right Section: Add Dish Form */
+    .form-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 1.5rem;
+    }
+
+    .form-panel h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .form-panel p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.15rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 0.4rem;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--text-main);
+      background-color: #ffffff;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: #f8fafc;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .checkbox-group input {
+      accent-color: var(--primary);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .checkbox-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #334155;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background-color 0.15s ease, transform 0.1s ease;
+      box-shadow: 0 2px 4px rgba(234, 88, 12, 0.25);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: scale(0.99);
+    }
+
+    .btn-primary:disabled {
+      background: #fdba74;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* Mutation helper notice */
+    .mutation-notice {
+      margin-top: 1.25rem;
+      padding: 0.75rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .mutation-notice code {
+      font-family: monospace;
+      color: #0f172a;
+      background: #e2e8f0;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+    }
+
+    /* Footer */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 1.25rem 1.5rem;
+      text-align: center;
+      margin-top: auto;
+    }
+
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .footer-team {
+      margin-top: 0.35rem;
+      font-weight: 500;
+      color: #475569;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="header-container">
+      <a href="/" class="brand">
+        <div class="brand-icon">🍛</div>
+        <div class="brand-text">
+          <h1>CampusEats</h1>
+          <p>Campus Canteen & Food Service</p>
+        </div>
+      </a>
+      <div class="header-badges">
+        <div class="badge endpoint">
+          <span class="dot"></span>
+          <span>GraphQL /graphql</span>
+        </div>
+        <div class="badge course">
+          <span>CS543 · Assignment 7</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Body -->
+  <main>
+    <!-- Notification Banner -->
+    <div id="alertBanner" class="alert">
+      <span id="alertMessage"></span>
+      <button class="alert-close" onclick="dismissAlert()" aria-label="Dismiss">&times;</button>
+    </div>
+
+    <div class="dashboard-layout">
+      <!-- Left Column: Menu Dishes List -->
+      <section class="menu-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>CampusEats Menu</h2>
+            <p>Live menu data queried through GraphQL (<code>query { dishes { ... } }</code>)</p>
+          </div>
+          <div class="panel-actions">
+            <span id="dishCount" class="count-pill">0 items</span>
+            <button id="refreshBtn" class="btn-secondary" onclick="loadDishes()">
+              <span id="refreshIcon">🔄</span> Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Content Container -->
+        <div id="dishContainer">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Querying GraphQL service for dishes...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Add Dish Form -->
+      <aside class="form-panel">
+        <h3><span>➕</span> Add New Dish</h3>
+        <p>Dispatches the <code>addDish(input: ...)</code> GraphQL mutation to persist a new record in MySQL.</p>
+
+        <form id="addDishForm" onsubmit="handleAddDish(event)">
+          <div class="form-group">
+            <label class="form-label" for="dishName">Dish Name *</label>
+            <input
+              type="text"
+              id="dishName"
+              class="form-input"
+              placeholder="e.g. Chole Bhature"
+              required
+              maxlength="150"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="dishPrice">Price (₹ INR) *</label>
+            <input
+              type="number"
+              id="dishPrice"
+              class="form-input"
+              placeholder="e.g. 110"
+              step="0.01"
+              min="0"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-group" for="dishAvailable">
+              <input type="checkbox" id="dishAvailable" checked>
+              <span class="checkbox-label">Mark as available for ordering</span>
+            </label>
+          </div>
+
+          <button type="submit" id="submitBtn" class="btn-primary">
+            <span id="submitBtnText">Add Dish to Menu</span>
+            <div id="submitBtnSpinner" class="btn-spinner" style="display: none;"></div>
+          </button>
+        </form>
+
+        <div class="mutation-notice">
+          <strong>GraphQL Mutation:</strong><br>
+          Executes <code>addDish(input: { name, price, available })</code> and maps input to a parameterized MySQL <code>INSERT</code> statement.
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Page Footer -->
+  <footer>
+    <div class="footer-content">
+      <p><strong>CampusEats GraphQL Service</strong> · CS543 Web Services · Assignment 7</p>
+      <p class="footer-team">Team: Krity Kumari (2025265101930) · Ujjwal Sharma (20252651060) · Vinit Gaikwad (20252651019) · Shubhag Baluni (2025265101953)</p>
+    </div>
+  </footer>
+
+  <!-- Frontend Logic: Vanilla JS GraphQL Client -->
+  <script>
+    const GRAPHQL_ENDPOINT = '/graphql';
+
+    /**
+     * Executes a GraphQL query or mutation using fetch()
+     * @param {string} query - The GraphQL query or mutation string
+     * @param {object} variables - Optional variables object
+     * @returns {Promise<any>} The parsed data payload
+     */
+    async function graphqlRequest(query, variables = {}) {
+      const response = await fetch(GRAPHQL_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ query, variables }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.errors && result.errors.length > 0) {
+        const errorMsg = result.errors.map(e => e.message).join(' | ');
+        throw new Error(errorMsg);
+      }
+
+      return result.data;
+    }
+
+    /**
+     * Shows feedback alert banner
+     */
+    function showAlert(message, type = 'success') {
+      const banner = document.getElementById('alertBanner');
+      const messageSpan = document.getElementById('alertMessage');
+      banner.className = `alert ${type}`;
+      messageSpan.textContent = message;
+      // Auto-scroll to top so user sees feedback
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function dismissAlert() {
+      const banner = document.getElementById('alertBanner');
+      banner.style.display = 'none';
+      banner.className = 'alert';
+    }
+
+    /**
+     * Fetches and renders all dishes using the GraphQL 'dishes' query
+     */
+    async function loadDishes() {
+      const container = document.getElementById('dishContainer');
+      const countPill = document.getElementById('dishCount');
+      const refreshBtn = document.getElementById('refreshBtn');
+
+      refreshBtn.disabled = true;
+
+      const DISHES_QUERY = `
+        query GetDishes {
+          dishes {
+            id
+            name
+            price
+            available
+          }
+        }
+      `;
+
+      try {
+        const data = await graphqlRequest(DISHES_QUERY);
+        const dishes = data.dishes || [];
+
+        countPill.textContent = `${dishes.length} ${dishes.length === 1 ? 'item' : 'items'}`;
+
+        if (dishes.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <p>🍽️ No dishes currently found in the database.</p>
+              <p>Use the form on the right to add the first dish!</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Render dishes using safe DOM manipulation
+        const grid = document.createElement('div');
+        grid.className = 'dish-grid';
+
+        dishes.forEach(dish => {
+          const card = document.createElement('div');
+          card.className = 'dish-card';
+
+          // Top row: ID and Status badge
+          const topRow = document.createElement('div');
+          topRow.className = 'dish-top';
+
+          const idSpan = document.createElement('span');
+          idSpan.className = 'dish-id';
+          idSpan.textContent = `#${dish.id}`;
+
+          const statusBadge = document.createElement('span');
+          statusBadge.className = `status-badge ${dish.available ? 'available' : 'unavailable'}`;
+          statusBadge.textContent = dish.available ? 'Available' : 'Unavailable';
+
+          topRow.appendChild(idSpan);
+          topRow.appendChild(statusBadge);
+
+          // Dish Name
+          const nameEl = document.createElement('h3');
+          nameEl.className = 'dish-name';
+          nameEl.textContent = dish.name;
+
+          // Bottom row: Price and Query tag
+          const bottomRow = document.createElement('div');
+          bottomRow.className = 'dish-bottom';
+
+          const priceTag = document.createElement('div');
+          priceTag.className = 'price-tag';
+
+          const priceLabel = document.createElement('span');
+          priceLabel.className = 'price-label';
+          priceLabel.textContent = 'Price';
+
+          const priceVal = document.createElement('span');
+          priceVal.className = 'price-value';
+          priceVal.textContent = `₹${parseFloat(dish.price).toFixed(2)}`;
+
+          priceTag.appendChild(priceLabel);
+          priceTag.appendChild(priceVal);
+
+          const queryTag = document.createElement('span');
+          queryTag.className = 'dish-query-tag';
+          queryTag.textContent = 'Dish.price: Float!';
+
+          bottomRow.appendChild(priceTag);
+          bottomRow.appendChild(queryTag);
+
+          // Assemble card
+          card.appendChild(topRow);
+          card.appendChild(nameEl);
+          card.appendChild(bottomRow);
+
+          grid.appendChild(card);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(grid);
+
+      } catch (err) {
+        console.error('Failed to load dishes:', err);
+        container.innerHTML = `
+          <div class="empty-state">
+            <p style="color: var(--danger-text);">⚠️ Error loading dishes: ${err.message}</p>
+            <p>Please ensure MySQL is running and Apollo Server is active.</p>
+          </div>
+        `;
+        showAlert(`Error fetching dishes: ${err.message}`, 'error');
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    }
+
+    /**
+     * Handles adding a new dish through the 'addDish' GraphQL mutation
+     */
+    async function handleAddDish(event) {
+      event.preventDefault();
+
+      const nameInput = document.getElementById('dishName');
+      const priceInput = document.getElementById('dishPrice');
+      const availableInput = document.getElementById('dishAvailable');
+      const submitBtn = document.getElementById('submitBtn');
+      const submitBtnText = document.getElementById('submitBtnText');
+      const submitBtnSpinner = document.getElementById('submitBtnSpinner');
+
+      const name = nameInput.value.trim();
+      const price = parseFloat(priceInput.value);
+      const available = availableInput.checked;
+
+      if (!name) {
+        showAlert('Please enter a valid dish name.', 'error');
+        return;
+      }
+
+      if (isNaN(price) || price < 0) {
+        showAlert('Please enter a valid non-negative price.', 'error');
+        return;
+      }
+
+      // Disable button and show spinner to prevent duplicate submissions
+      submitBtn.disabled = true;
+      submitBtnText.textContent = 'Adding Dish...';
+      submitBtnSpinner.style.display = 'block';
+
+      const ADD_DISH_MUTATION = `
+        mutation AddDishToMenu($input: AddDishInput!) {
+          addDish(input: $input) {
+            id
+            name
+            price
+            available
+          }
+        }
+      `;
+
+      try {
+        const variables = {
+          input: {
+            name: name,
+            price: price,
+            available: available,
+          },
+        };
+
+        const data = await graphqlRequest(ADD_DISH_MUTATION, variables);
+        const newDish = data.addDish;
+
+        showAlert(`✅ Dish "${newDish.name}" (ID #${newDish.id}) added to menu successfully at ₹${newDish.price.toFixed(2)}!`, 'success');
+
+        // Reset form
+        nameInput.value = '';
+        priceInput.value = '';
+        availableInput.checked = true;
+
+        // Refresh menu list to display new database record
+        await loadDishes();
+
+      } catch (err) {
+        console.error('Mutation failed:', err);
+        showAlert(`Failed to add dish: ${err.message}`, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtnText.textContent = 'Add Dish to Menu';
+        submitBtnSpinner.style.display = 'none';
+      }
+    }
+
+    // Initial load on DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDishes();
+    });
+  </script>
+</body>
+</html>

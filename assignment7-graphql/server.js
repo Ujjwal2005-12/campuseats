@@ -10,6 +10,7 @@ import { expressMiddleware } from '@apollo/server/express4';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import { GraphQLError } from 'graphql';
 import { query, testConnection } from './db.js';
+import itemsRouter from './routes/items.routes.js';
 
 dotenv.config();
 
@@ -133,6 +134,7 @@ async function startServer() {
   // Middleware
   app.use(cors());
   app.use(express.json());
+  app.use('/items', itemsRouter);
 
   // Mount Apollo Server at /graphql
   app.use('/graphql', expressMiddleware(server));
