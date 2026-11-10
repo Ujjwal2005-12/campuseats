@@ -225,3 +225,39 @@ The JWT also contains standard claims such as `iat` (issued at) and `exp` (expir
 The role claim is safe to trust on the server because the JWT is digitally signed using a secret key. The server verifies the signature using `jwt.verify()` before accessing the payload. If someone modifies the role claim, the signature verification fails.
 
 The JWT secret must remain outside the source code because exposing it could allow an attacker to generate forged tokens and impersonate privileged users. Therefore, the secret is stored in the `.env` file and accessed through `process.env.JWT_SECRET`. The `.env` file is excluded from Git using `.gitignore`.
+
+## Assignment 09 – Securing the API
+
+### 1. Authentication and Role-Based Authorization
+
+The API uses JWT authentication to protect its REST endpoints.
+
+| Method | Route | Access Requirement |
+|---|---|---|
+| GET | `/items` | Authentication only – any authenticated user |
+| GET | `/items/:id` | Authentication only – any authenticated user |
+| POST | `/items` | Authentication + `restaurant` role |
+| DELETE | `/items/:id` | Authentication + `restaurant` role |
+| POST | `/login` | Public route – credentials are verified to obtain a JWT |
+
+Customers and restaurant users can log in and receive JWT tokens. However, only users with the `restaurant` role can add or delete menu items.
+
+### 2. HTTP 401 and 403 Responses
+
+- **401 Unauthorized:** When a user requests `GET /items` without providing a JWT, the server returns 401 because authentication is missing.
+- **403 Forbidden:** When an authenticated customer attempts to add an item using `POST /items`, the server returns 403 because the customer does not have the required `restaurant` role.
+
+**Difference:** 401 means the request is not successfully authenticated, whereas 403 means the user is authenticated but does not have permission to perform the requested action.
+
+### 3. JWT Payload and Secret Security
+
+The JWT payload contains:
+
+- `id`: The user's unique ID.
+- `role`: The user's role, such as `customer` or `restaurant`.
+
+The JWT also contains standard claims such as `iat` (issued at) and `exp` (expiration time).
+
+The role claim is safe to trust on the server because the JWT is digitally signed using a secret key. The server verifies the signature using `jwt.verify()` before accessing the payload. If someone modifies the role claim, the signature verification fails.
+
+The JWT secret must remain outside the source code because exposing it could allow an attacker to generate forged tokens and impersonate privileged users. Therefore, the secret is stored in the `.env` file and accessed through `process.env.JWT_SECRET`. The `.env` file is excluded from Git using `.gitignore`.
