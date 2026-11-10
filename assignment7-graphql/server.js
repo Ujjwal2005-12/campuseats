@@ -1,3 +1,7 @@
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import users from './data/users.js';
+
 import express from 'express';
 import http from 'http';
 import path from 'path';
@@ -133,8 +137,39 @@ async function startServer() {
 
   // Middleware
   app.use(cors());
-  app.use(express.json());
-  app.use('/items', itemsRouter);
+app.use(express.json());
+
+// Login API
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+
+    const user = users.find(u => u.username === username);
+
+    if (
+        !user ||
+        typeof password !== 'string' ||
+        !bcrypt.compareSync(password, user.password)
+    ) {
+        return res.status(401).json({
+            error: 'Invalid username or password'
+        });
+    }
+
+    const token = jwt.sign(
+        {
+            id: user.id,
+            role: user.role
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: '1h'
+        }
+    );
+
+    res.status(200).json({ token });
+});
+
+app.use('/items', itemsRouter);
 
   // Mount Apollo Server at /graphql
   app.use('/graphql', expressMiddleware(server));

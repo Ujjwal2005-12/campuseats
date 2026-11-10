@@ -1,5 +1,5 @@
 import express from 'express';
-
+import { authenticate, requireRole } from '../middleware/auth.middleware.js';
 const router = express.Router();
 
 // In-memory seed data
@@ -13,12 +13,12 @@ let items = [
 let nextId = 5;
 
 // GET /items - Get all items
-router.get('/', (req, res) => {
+router.get('/', authenticate, (req, res) => {
     res.status(200).json(items);
 });
 
 // GET /items/:id - Get one item
-router.get('/:id', (req, res) => {
+router.get('/:id', authenticate, (req, res) => {
     const id = Number(req.params.id);
 
     const item = items.find(item => item.id === id);
@@ -33,7 +33,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /items - Create new item
-router.post('/', (req, res) => {
+router.post('/', authenticate, requireRole('restaurant'), (req, res) => {
     const { name, price, available } = req.body;
 
     if (
@@ -60,6 +60,23 @@ router.post('/', (req, res) => {
     items.push(newItem);
 
     res.status(201).json(newItem);
+});
+
+// DELETE /:id
+router.delete('/:id', authenticate, requireRole('restaurant'), (req, res) => {
+    const id = Number(req.params.id);
+
+    const index = items.findIndex(item => item.id === id);
+
+    if (index === -1) {
+        return res.status(404).json({
+            error: 'Item not found'
+        });
+    }
+
+    items.splice(index, 1);
+
+    return res.status(204).send();
 });
 
 export default router;
